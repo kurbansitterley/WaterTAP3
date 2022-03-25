@@ -1,4 +1,4 @@
-from pyomo.environ import value, Block, Var, Constraint, Expression, units as pyunits
+from pyomo.environ import Var, Constraint, Expression, units as pyunits
 from watertap3.utils import financials
 from watertap3.wt_units.wt_unit import WT3UnitProcess
 import pandas as pd
@@ -32,7 +32,23 @@ class UnitProcess(WT3UnitProcess):
                 bounds=(0, None),
                 doc='Oxidant dose [mg/L')
 
-        self.toc_in = (self.parent_block().source_df.loc['toc'].value * 1000) * (pyunits.mg / pyunits.liter)
+        if 'toc_method' in self.unit_params.keys():
+            self.toc_method = self.unit_params['toc_method']
+            if self.toc_method not in ['user', 'source', 'deprecated']:
+                self.toc_method = 'source'
+        else:
+            self.toc_method = 'source'
+        if self.toc_method == 'source':
+            try:
+                self.toc_in = (self.parent_block().source_df.loc['toc'].value * 1000) * (pyunits.mg / pyunits.liter)
+            except KeyError:
+                print('TOC not found in source file. Assuming TOC = 5 mg/L')
+                self.toc_in = 5 * (pyunits.mg / pyunits.liter)
+        if self.toc_method == 'user':
+            self.toc_in = self.unit_params['toc_in'] * (pyunits.mg / pyunits.liter)
+        if self.toc_method == 'deprecated':
+            self.toc_in = pyunits.convert(self.conc_mass_in[0, 'toc'],
+                to_units=pyunits.mg/pyunits.liter)
         if 'aop' in self.unit_params.keys():
             self.aop = self.unit_params['aop']
         else:
