@@ -49,7 +49,7 @@ def watertap_setup(dynamic=False, case_study=None, reference='nawi', scenario=No
             source_flow = source_df.loc['flow'].value
         source_df.drop(source_df[source_df.index == 'flow'].index, inplace=True)
         return source_flow, source_df
-
+    
     case_study_print = case_study.replace('_', ' ').swapcase()
     scenario_print = scenario.replace('_', ' ').swapcase()
 
@@ -225,7 +225,7 @@ def run_model(m, solver='ipopt', tolerance=None, tee=False, objective=False,
         print_results(m)
 
 def run_model_no_print(m, solver='ipopt', tolerance=None, tee=False, objective=False, 
-                        max_attempts=3, initial_run=True, mip_solver='glpk'):
+                        max_attempts=3, initial_run=True, mip_solver='glpk', return_model=False):
 
     if initial_run:
         financials.get_system_costing(m.fs)
@@ -254,6 +254,9 @@ def run_model_no_print(m, solver='ipopt', tolerance=None, tee=False, objective=F
         else:
             m.fs.results = results = model_solver.solve(m, tee=tee)
         attempt_number += 1
+    
+    if return_model:
+        return m
 
 def run_watertap3(m, desired_recovery=1, ro_bounds='seawater', solver='ipopt', 
                     return_df=False, tolerance=None, tee=False):
@@ -523,6 +526,11 @@ def print_results(m):
             if b_unit.unit_type == 'evaporation_pond':
                 print(f'\tPond Area (acres): {round(b_unit.area[0](), 3)}')
             print('\tWater Recovery (%):', round(value((b_unit.flow_vol_out[0]() / b_unit.flow_vol_in[0]())), 5) * 100)
+        if b_unit.unit_type == 'uv_aop':
+            print(f'\tUV Dose (mJ/cm2): {round(b_unit.uv_dose, 1)}')
+            print(f'\tUVT (%): {round(b_unit.uvt_in, 3) * 100}%')
+            print('\tWater Recovery (%):', round(value(b_unit.water_recovery[0]()), 5) * 100)
+
         elif b_unit.unit_type != 'reverse_osmosis':
             print('\tWater Recovery (%):', round(value(b_unit.water_recovery[0]()), 5) * 100)
 
