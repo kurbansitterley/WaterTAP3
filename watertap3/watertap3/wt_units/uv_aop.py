@@ -1,5 +1,5 @@
 import pandas as pd
-from pyomo.environ import Block, Expression, units as pyunits
+from pyomo.environ import Expression, Constraint, Var, Param, units as pyunits
 from scipy.optimize import curve_fit
 from watertap3.utils import financials
 from watertap3.wt_units.wt_unit import WT3UnitProcess
@@ -17,7 +17,7 @@ tpec_or_tic = 'TPEC'
 
 class UnitProcess(WT3UnitProcess):
 
-    def fixed_cap(self, unit_params):
+    def fixed_cap(self):
         '''
         **"unit_params" are the unit parameters passed to the model from the input sheet as a Python dictionary.**
 
@@ -40,37 +40,111 @@ class UnitProcess(WT3UnitProcess):
         time = self.flowsheet().config.time.first()
         self.flow_in = pyunits.convert(self.flow_vol_in[time], to_units=pyunits.m ** 3 / pyunits.hr)
         try:
-            self.aop = unit_params['aop']
+            self.aop = self.unit_params['aop']
         except:
             self.aop = False
+        if self.aop:
+            try:
+                self.dose = self.unit_params['dose'] * (pyunits.mg / pyunits.liter)
+            except:
+                self.dose = 5 * (pyunits.mg / pyunits.liter)
+            try:
+                self.chem_name = self.unit_params['chemical_name']
+            except:
+                self.chem_name = 'Hydrogen_Peroxide'
+            self.ox_dose = pyunits.convert(self.dose, to_units=(pyunits.kg / pyunits.m ** 3))
+            self.chem_dict = {'Hydrogen_Peroxide': self.ox_dose}
+            self.h2o2_base_cap = 1228
+            self.h2o2_cap_exp = 0.2277
+            self.h2o2_cap = (self.h2o2_base_cap * self.solution_vol_flow() ** self.h2o2_cap_exp) * 1E-3
+        else:
+            self.chem_dict = {}
+            self.h2o2_cap = 0
         try:
-            self.uvt_in = unit_params['uvt_in']
-            self.uv_dose = unit_params['uv_dose']
-            chem_name = unit_params['chemical_name']
+            self.uvt_in = self.unit_params['uvt_in']
+            self.uv_dose = self.unit_params['uv_dose']
         except:
             self.uvt_in = 0.9
             self.uv_dose = 100
-            chem_name = 'Hydrogen_Peroxide'
-        if self.aop:
-            self.ox_dose = pyunits.convert(unit_params['dose'] * (pyunits.mg / pyunits.liter), to_units=(pyunits.kg / pyunits.m ** 3))
-            self.chem_dict = {chem_name: self.ox_dose}
-            self.h2o2_base_cap = 1228
-            self.h2o2_cap_exp = 0.2277
-        else:
-            self.chem_dict = {}
         self.a, self.b = self.uv_regress()
         flow_in_mgd = pyunits.convert(self.flow_in, to_units=(pyunits.Mgallons / pyunits.day))
-        uv_cap = (self.a * flow_in_mgd ** self.b) * 1E-3
-        if self.aop:
-            h2o2_cap = (self.h2o2_base_cap * self.solution_vol_flow() ** self.h2o2_cap_exp) * 1E-3
-        else:
-            h2o2_cap = 0
-        uv_aop_cap = h2o2_cap + uv_cap
-        return uv_aop_cap
+        self.uv_cap = (self.a * flow_in_mgd ** self.b) * 1E-3
+        self.uv_aop_cap = self.uv_cap + self.h2o2_cap
+        return self.uv_aop_cap
 
-    def elect(self):  # m3/hr
-        electricity = 0.1  # kWh / m3
-        return electricity
+    def elect(self):
+        
+        self.EEO = Var(initialize=0.1,
+                        units=(pyunits.kW*pyunits.hr)/(pyunits.m**3),
+                        bounds=(0, 250),
+                        doc='Electric energy per order of removal (EE/O) [kWh/m3]')
+        self.EEO.fix(0.1)
+        
+        self.lamp_eff = Var(initialize=0.30,
+                        units=pyunits.dimensionless,
+                        doc='UV lamp efficiency [dimensionless]')
+        self.lamp_eff.fix(0.3)
+
+        self.order_of_mag_removal = Var(initialize=1,
+                        units=pyunits.dimensionless,
+                        bounds=(0, None),
+                        doc='Order-of-magnitude removal for contaminant of interest')
+        self.order_of_mag_removal.fix(1)
+
+        self.lamp_power = Var(initialize=40,
+                        units=pyunits.kW,
+                        doc='UV system lamp power [kW]')
+        
+        for k, v in self.unit_params.items():
+            if k in ['EEO', 'lamp_eff', 'order_of_mag_removal']:
+                getattr(self, k).fix(v)
+
+        self.lamp_power_constr = Constraint(expr=self.lamp_power == 
+                (self.EEO * self.flow_in * self.order_of_mag_removal) / self.lamp_eff)
+
+        if self.aop:
+            self.lift_height = Var(initialize=1,
+                            units=pyunits.ft,
+                            bounds=(0, None),
+                            doc='Lift height for H2O2 pump [ft]')
+                            
+            self.lift_height.fix(100)
+
+            self.pump_eff = Var(initialize=0.9,
+                            units=pyunits.dimensionless,
+                            bounds=(0, 1),
+                            doc='Pump efficiency for H2O2 pump')
+
+            self.pump_eff.fix(0.9)
+
+            self.motor_eff = Var(initialize=0.9, 
+                            units=pyunits.dimensionless,
+                            bounds=(0, 1), 
+                            doc='Motor efficiency for H2O2 pump')
+
+            self.motor_eff.fix(0.9)
+
+            self.h2o2_density = Param(initialize=1130,
+                                    units=pyunits.kg/pyunits.m**3)
+
+            self.ox_pump_power = Var(initialize=100, 
+                            units=pyunits.kW,
+                            bounds=(0, None), 
+                            doc='Power for H2O2 pump')
+
+            for k, v in self.unit_params.items():
+                if k in ['lift_height', 'pump_eff', 'motor_eff']:
+                    getattr(self, k).fix(v)
+            
+            soln_vol_flow = pyunits.convert(self.solution_vol_flow() / self.h2o2_density, 
+                            to_units=(pyunits.gallon / pyunits.minute))
+            self.ox_power_constr = Constraint(expr=self.ox_pump_power == 
+                            (0.746 * soln_vol_flow * self.lift_height / (3960 * self.pump_eff * self.motor_eff)))
+            self.ox_elect = self.ox_pump_power / self.flow_in
+        else:
+            self.ox_elect = 0
+
+        return self.EEO + self.ox_elect
 
     def uv_regress(self):
         '''
@@ -113,7 +187,7 @@ class UnitProcess(WT3UnitProcess):
         Initialize the unit in WaterTAP3.
         '''
         financials.create_costing_block(self, basis_year, tpec_or_tic)
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(unit_params),
+        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
                                                            doc='Unadjusted fixed capital investment')  # $M
         self.electricity = Expression(expr=self.elect(),
                                       doc='Electricity intensity [kwh/m3]')  # kwh/m3
