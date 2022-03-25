@@ -141,11 +141,18 @@ class UnitProcess(WT3UnitProcess):
                 bounds=(0, None),
                 doc='Ozone power coeff [kW/lb/hr]')
             self.ozone_power_coeff.fix(5)
+
+            self.ozone_flow = Var(initialize=1,
+                    units=pyunits.lb/pyunits.hr,
+                    bounds=(0, None),
+                    doc='Ozone flow [lb/hr]')
+            self.ozone_flow_constr = Constraint(expr=
+                    self.ozone_flow == pyunits.convert(self.flow_in * self.ozone_consumption,
+                    to_units=pyunits.lb/pyunits.hr))
+            self.ozone_power_constr = Constraint(expr=
+                            self.ozone_power == self.ozone_power_coeff * self.ozone_flow)
             flow_in_m3hr = pyunits.convert(self.flow_in, 
                             to_units=(pyunits.m**3/pyunits.hour))
-            ozone_flow = self.o3_flow()
-            self.ozone_power_constr = Constraint(expr=
-                            self.ozone_power == self.ozone_power_coeff * ozone_flow)
             electricity = self.ozone_power / flow_in_m3hr
             return electricity
 
@@ -158,24 +165,6 @@ class UnitProcess(WT3UnitProcess):
         chemical_rate = self.flow_in * self.ox_dose  # kg/hr
         chemical_rate = pyunits.convert(chemical_rate, to_units=(pyunits.lb / pyunits.day))
         return chemical_rate
-
-    def o3_flow(self):
-        '''
-        Determine ozone flow rate [lb/hr]
-
-        :return: Ozone flow [lb/hr]
-        '''
-        # flow_in_m3hr = pyunits.convert(self.flow_in, to_units=(pyunits.m ** 3 / pyunits.hour)) 
-        self.ozone_flow = Var(initialize=1,
-                units=pyunits.mg/pyunits.L,
-                bounds=(0, None),
-                doc='Ozone flow [mg/L')
-        self.ozone_flow_constr = Constraint(expr=
-                self.ozone_flow == pyunits.convert(self.flow_in * self. ozone_consumption,
-                to_units=pyunits.lb/pyunits.hr))
-        # self.ozone_flow = self.flow_in * self.ozone_consumption
-        # self.ozone_flow = pyunits.convert(self.ozone_flow, to_units=(pyunits.lb / pyunits.hour))
-        return self.ozone_flow
 
     def get_costing(self, unit_params=None, year=None):
         '''
