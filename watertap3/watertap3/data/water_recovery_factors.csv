@@ -90,6 +90,7 @@ default,,multi_stage_bubble_aeration,0.9999,"Distribution costs are based on pum
 default,,municipal_drinking,0.9999,
 default,,municipal_wwtp,0.9999,Texas Water Development Board IT3PR User Manual
 default,,nano_filtration,0.85,Based on Vogtle case study data. No costs for WT3 treatment.
+default,,nanofiltration,0.83,Based on Vogtle case study data. No costs for WT3 treatment.
 default,,onsite_storage,0.9999,Texas Water Development Board IT3PR User Manual
 default,,ozonation,0.9999,Texas Water Development Board IT3PR User Manual
 default,,ozone_aop,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
@@ -129,6 +130,7 @@ default,,treated_storage,0.9999,DOE/NETL-2002/1169 - Process Equipment Cost Esti
 default,,tri_media_filtration,0.9,Texas Water Development Board IT3PR User Manual
 san_luis,baseline,uf_feed_pump,0.9999,Defined based on the San Luis case study data.
 default,,uf_feed_pump,0.9999,Defined based on the San Luis case study data.
+default,,ultrafiltration,0.95,Texas Water Development Board IT3PR User Manual
 default,,ultra_filtration,0.95,Texas Water Development Board IT3PR User Manual
 default,,uv_aop,0.9999,Texas Water Development Board IT3PR User Manual
 default,,uv_irradiation,0.9999,Texas Water Development Board IT3PR User Manual
