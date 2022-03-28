@@ -19,9 +19,6 @@ def get_module(module_name):
      
     if module_name == 'lime_softening':
         import wt_units.lime_softening as up
-
-    if module_name == 'electrocoagulation':
-        import wt_units.electrocoagulation as up
         
     if module_name == 'treated_storage':
         import wt_units.treated_storage as up
@@ -142,6 +139,9 @@ def get_module(module_name):
 
     if module_name == 'microfiltration':
         import wt_units.microfiltration as up
+
+    if module_name == 'ultrafiltration':
+        import wt_units.ultrafiltration as up
     
     if module_name == 'reverse_osmosis':
         import wt_units.reverse_osmosis as up

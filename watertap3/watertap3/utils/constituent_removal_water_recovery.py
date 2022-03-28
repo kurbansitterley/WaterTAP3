@@ -27,12 +27,14 @@ def create(m, unit_process_type, unit_process_name):
             flow_recovery_factor = float(default_df)
             getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
 
-    train_constituent_removal_factors = generate_constituent_list.get_removal_factors(m, unit_process_type, unit_process_name)
+    train_constituent_removal_factors = \
+        generate_constituent_list.get_removal_factors(m, unit_process_type, unit_process_name)
 
     for constituent_name in getattr(m.fs, unit_process_name).config.property_package.component_list:
+        unit = getattr(m.fs, unit_process_name)
         if constituent_name in train_constituent_removal_factors.keys():
-            getattr(m.fs, unit_process_name).removal_fraction[:, constituent_name].fix(train_constituent_removal_factors[constituent_name])
+            unit.removal_fraction[:, constituent_name].fix(train_constituent_removal_factors[constituent_name])
         else:
-            getattr(m.fs, unit_process_name).removal_fraction[:, constituent_name].fix(1E-5)
+            unit.removal_fraction[:, constituent_name].fix(1E-5)
     return m
 

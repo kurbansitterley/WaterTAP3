@@ -64,6 +64,7 @@ class UnitProcess(WT3UnitProcess):
         if self.cost_method == 'twb':
             self.basis_year = 2014
         if self.cost_method == 'wtrnet':
+            self.water_recovery.fix(0.85)
             self.basis_year = 2006
         financials.create_costing_block(self, self.basis_year, tpec_or_tic)
 
