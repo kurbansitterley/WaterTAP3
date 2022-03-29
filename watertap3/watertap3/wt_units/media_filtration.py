@@ -37,18 +37,56 @@ class UnitProcess(WT3UnitProcess):
             doc='Number of units')
         self.number_units.fix(6)
 
+        self.media_capital_A = Var(initialize=1E3,
+            units=pyunits.dimensionless,
+            bounds=(0, None),
+            doc='Media capital A factor')
+
+        self.media_capital_B = Var(initialize=0.7,
+            units=pyunits.dimensionless,
+            bounds=(0, None),
+            doc='Media capital B factor')
+
+        self.structure_capital_A = Var(initialize=10439,
+            units=pyunits.dimensionless,
+            bounds=(0, None),
+            doc='Filter structure capital A factor')
+        self.structure_capital_A.fix(10439)
+
+        self.structure_capital_B = Var(initialize=0.6922,
+            units=pyunits.dimensionless,
+            bounds=(0, None),
+            doc='Filter structure capital B factor')
+        self.structure_capital_B.fix(0.6922)
+
+        self.backwash_capital_A = Var(initialize=10439,
+            units=pyunits.dimensionless,
+            bounds=(0, None),
+            doc='Backwash capital A factor')
+        self.backwash_capital_A.fix(10056)
+
+        self.backwash_capital_B = Var(initialize=0.5222,
+            units=pyunits.dimensionless,
+            bounds=(0, None),
+            doc='Backwash capital B factor')
+        self.backwash_capital_B.fix(0.5222)
+
         self.filter_surface_area = Var(initialize=100,
             units=pyunits.ft**2,
             bounds=(0, None),
             doc='Surface area [ft2]')
 
-        self.dual_filter_cost = Var(initialize=1E3,
+        self.media_cost = Var(initialize=1E3,
             bounds=(0, None),
-            doc='Dual media filter cost')
+            doc='Media cost')
 
         self.filter_backwash_cost = Var(initialize=1E3,
             bounds=(0, None),
             doc='Backwash cost')
+
+        self.filter_structure_cost = Var(initialize=1E3,
+            bounds=(0, None),
+            doc='Structure cost')
 
         self.media_filter_fixed_cap = Var(initialize=1000,
             bounds=(0, None),
@@ -64,19 +102,43 @@ class UnitProcess(WT3UnitProcess):
             if k in ['loading_rate', 'number_units']:
                 getattr(self, k).fix(v)
 
+        if 'media_type' in self.unit_params.keys():
+            self.media_type = self.unit_params['media_type']
+            if self.media_type not in ['dual', 'tri', 'sand']:
+                self.media_type == 'dual'
+        else:
+            self.media_type = 'dual'
+
+        if self.media_type == 'dual':
+            self.media_capital_A.fix(98.0182)
+            self.media_capital_B.fix(0.9056)
+        if self.media_type == 'tri':
+            self.media_capital_A.fix(207.97)
+            self.media_capital_B.fix(0.8729)
+        if self.media_type == 'sand':
+            self.media_capital_A.fix(296.15)
+            self.media_capital_B.fix(0.714)
+
         self.surface_area_constr = Constraint(expr=
-            self.filter_surface_area == pyunits.convert(self.flow_in / (self.loading_rate * self.number_units),
+            self.filter_surface_area == pyunits.convert(self.flow_in / 
+            (self.loading_rate * self.number_units),
             to_units=pyunits.ft**2))
 
-        self.dual_filter_cost_constr = Constraint(expr=
-            self.dual_filter_cost == (38.319 * self.filter_surface_area + 21377))
+        self.media_capital_constr = Constraint(expr=
+            self.media_cost == self.media_capital_A * self.filter_surface_area ** self.media_capital_B)
 
         self.backwash_cost_constr = Constraint(expr=
-            self.filter_backwash_cost == 292.44 * self.filter_surface_area + 92497)
+            self.filter_backwash_cost == 
+            (self.backwash_capital_A * self.filter_surface_area ** self.backwash_capital_B) * 
+            (1 - self.water_recovery[time]))
+
+        self.structure_cost_constr = Constraint(expr=
+            self.filter_structure_cost == self.structure_capital_A * self.filter_surface_area ** self.structure_capital_B)
 
         self.media_filter_fixed_cap_constr = Constraint(expr=
-            self.media_filter_fixed_cap == self.tpec_tic * \
-            ((self.dual_filter_cost + self.filter_backwash_cost) * self.number_units) * 1E-6)
+            self.media_filter_fixed_cap == #self.tpec_tic * \
+            ((self.media_cost + self.filter_structure_cost + self.filter_backwash_cost) 
+            * self.number_units) * 1E-6)
 
 
     def get_costing(self, unit_params=None, year=None):
@@ -88,5 +150,5 @@ class UnitProcess(WT3UnitProcess):
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.media_filter_fixed_cap,
                                                            doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.media_filter_electricity,
-                                      doc='Electricity intensity [kwh/m3]')
+                                      doc='Electricity intensity [kWh/m3]')
         financials.get_complete_costing(self.costing)
