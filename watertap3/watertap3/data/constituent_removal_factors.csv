@@ -577,7 +577,7 @@ ultra_filtration,default,baseline,%,75,ultraviolet_transmittance_uvt,absolute_va
 ultrafiltration,default,baseline,kg/m3,0.3,eeq,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Estradiol Equivalency (EEQ)
 ultrafiltration,default,baseline,kg/m3,0.3,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
 ultrafiltration,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
-ultrafiltration,default,baseline,kg/m3,0.9999,cryptosporidium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Cryptosporidium
+ultrafiltration,default,baseline,kg/m3,0.9999,cryptosporidium,0,nawi,Texas Water Development Board IT3PR User Manual,Cryptosporidium
 ultrafiltration,default,baseline,kg/m3,0.3,turbidity,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Estradiol Equivalency (EEQ)
 ultrafiltration,default,baseline,kg/m3,0.3,bod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Total Organic Carbon (TOC)
 ultrafiltration,default,baseline,kg/m3,0.97,cod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Total Suspended Solids (TSS)

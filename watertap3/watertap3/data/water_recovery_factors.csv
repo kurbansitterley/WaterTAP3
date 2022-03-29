@@ -63,7 +63,7 @@ default,,ferric_chloride_addition,0.9999,EPA model: https://www.epa.gov/sdwa/dri
 default,,filter_press,0.01,
 default,,fixed_bed_gravity_basin,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
 default,,fixed_bed_pressure_vessel,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
-default,,flocculator,calculated,Based on costs for Aluminum Sulfate (Liquid Alum Feed) from Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)
+default,,flocculator,0.9999,Based on costs for Aluminum Sulfate (Liquid Alum Feed) from Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)
 default,,fluidized_bed,0.9999,Placeholder. Not utilized in any case studies. 
 default,,gac_gravity,0.96,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
 default,,gac_pressure_vessel,0.96,Heap leaching (gold/copper) case study.
@@ -90,7 +90,7 @@ default,,multi_stage_bubble_aeration,0.9999,"Distribution costs are based on pum
 default,,municipal_drinking,0.9999,
 default,,municipal_wwtp,0.9999,Texas Water Development Board IT3PR User Manual
 default,,nano_filtration,0.85,Based on Vogtle case study data. No costs for WT3 treatment.
-default,,nanofiltration,0.83,Based on Vogtle case study data. No costs for WT3 treatment.
+default,,nanofiltration,0.85,Based on Vogtle case study data. No costs for WT3 treatment.
 default,,onsite_storage,0.9999,Texas Water Development Board IT3PR User Manual
 default,,ozonation,0.9999,Texas Water Development Board IT3PR User Manual
 default,,ozone_aop,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
