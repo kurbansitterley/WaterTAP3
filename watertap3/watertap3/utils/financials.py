@@ -226,12 +226,15 @@ def get_complete_costing(costing):
 
     cat_chem_df = pd.read_csv('data/chemical_costs.csv', index_col='Material')
     chem_cost_sum = 0
-    for key in chem_dict.keys():
-        if key == 'unit_cost':
+    for chem, dose in chem_dict.items():
+        if chem == 'unit_cost':
             chem_cost_sum = chem_dict[key] * costing.fixed_cap_inv * 1E6
         else:
-            chem_cost = cat_chem_df.loc[key].Price
-            chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * chem_cost * chem_dict[key] * sys_specs.plant_cap_utilization
+            chem_name = chem.replace('(', '').replace(')', '').replace(' ', '_').replace('%', 'pct')
+            setattr(costing, f'{chem_name}_unit_price', Var(doc=f'Unit Cost of {chem}'))
+            chem_var = getattr(costing, f'{chem_name}_unit_price')
+            chem_var.fix(cat_chem_df.loc[chem].Price)
+            chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * chem_var * dose * sys_specs.plant_cap_utilization
 
     costing.cat_and_chem_cost = ((chem_cost_sum * 1E-6) * (1 - costing.catchem_reduction[t])) * costing.catchem_uncertainty[t]
 
