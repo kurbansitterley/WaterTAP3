@@ -15,8 +15,10 @@ class UnitProcess(WT3UnitProcess):
         time = self.flowsheet().config.time.first()
         self.flow_in = pyunits.convert(self.flow_vol_in[time], to_units=pyunits.Mgallons / pyunits.day)
         self.chem_dict = {}
-        self.base_fixed_cap_cost = 0.72557
-        self.cap_scaling_exp = 0.5862
+        # self.base_fixed_cap_cost = 0.72557
+        # self.cap_scaling_exp = 0.5862
+        self.base_fixed_cap_cost = 0.2161
+        self.cap_scaling_exp = 0.7639
         cart_filt_cap = self.base_fixed_cap_cost * self.flow_in ** self.cap_scaling_exp
         return cart_filt_cap
 
