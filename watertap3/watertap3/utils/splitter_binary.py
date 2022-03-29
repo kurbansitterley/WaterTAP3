@@ -102,7 +102,9 @@ class SplitterProcessData(UnitModelBlockData):
         self.flow_constr = ConstraintList()
 
         for (outlet, to_unit) in zip(outlet_list, to_units):
-            setattr(self, outlet, Port(noruleinit=True, doc=f'Outlet Port {outlet}\nFlows to {to_unit}'))
+            setattr(self, outlet, 
+                    Port(noruleinit=True, 
+                         doc=f'Outlet Port {outlet}\nFlows to {to_unit}'))
             
             port_outlet = getattr(self, outlet)
             port_outlet.to_unit = to_unit

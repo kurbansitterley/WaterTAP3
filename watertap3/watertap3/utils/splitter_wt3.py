@@ -60,7 +60,7 @@ class SplitterProcessData(UnitModelBlockData):
         time = self.flowsheet().config.time
         t = self.flowsheet().config.time.first()
         units_meta = self.config.property_package.get_metadata().get_derived_units
-        self.outlet_list = outlet_list = outlet_list_up.keys()
+        self.outlet_list = outlet_list = list(outlet_list_up.keys())
         self.split_fraction_vars = []
 
         self.inlet = Port(noruleinit=True, doc='Inlet Port')

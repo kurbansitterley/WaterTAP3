@@ -526,11 +526,12 @@ def print_results(m):
             if b_unit.unit_type == 'evaporation_pond':
                 print(f'\tPond Area (acres): {round(b_unit.area[0](), 3)}')
             print('\tWater Recovery (%):', round(value((b_unit.flow_vol_out[0]() / b_unit.flow_vol_in[0]())), 5) * 100)
+            continue
         if b_unit.unit_type == 'uv_aop':
             print(f'\tUV Dose (mJ/cm2): {round(b_unit.uv_dose, 1)}')
             print(f'\tUVT (%): {round(b_unit.uvt_in, 3) * 100}%')
             print('\tWater Recovery (%):', round(value(b_unit.water_recovery[0]()), 5) * 100)
-
+            continue
         elif b_unit.unit_type != 'reverse_osmosis':
             print('\tWater Recovery (%):', round(value(b_unit.water_recovery[0]()), 5) * 100)
 
@@ -837,7 +838,7 @@ def make_decision(m, case_study, scenario):
             if isinstance(start_u, list):
                 temp_drop = connected_units(start_u, temp_pfd_dict, units=[s for s in start_u])
             else:
-                print('else')
+                # print('else')
                 temp_drop = connected_units(start_u, temp_pfd_dict, units=[start_u])
             units_to_drop += temp_drop
         temp_keep = connected_units(from_unit, temp_pfd_dict, units=[])
