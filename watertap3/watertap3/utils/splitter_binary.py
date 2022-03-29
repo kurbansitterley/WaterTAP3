@@ -70,27 +70,26 @@ class SplitterProcessData(UnitModelBlockData):
         self.inlet = Port(noruleinit=True, doc='Inlet Port')
 
         self.flow_vol_in = Var(time,
-                               initialize=1,
-                            #    domain=NonNegativeReals,
-                               bounds=(-1E2, 1E2),
-                               units=units_meta('volume') / units_meta('time'),
-                               doc='Volumetric flowrate of water in to splitter [m3/s]')
+            initialize=1,
+            bounds=(-1E2, 1E2),
+            units=units_meta('volume') / units_meta('time'),
+            doc='Volumetric flowrate of water in to splitter [m3/s]')
         self.conc_mass_in = Var(time,
-                                self.config.property_package.component_list,
-                                initialize=1E-3,
-                                bounds=(-1E5, 1E5),
-                                units=units_meta('mass') / units_meta('volume'),
-                                doc='Mass concentration of species at outlet')
+            self.config.property_package.component_list,
+            initialize=1E-3,
+            bounds=(-1E5, 1E5),
+            units=units_meta('mass') / units_meta('volume'),
+            doc='Mass concentration of species at outlet')
         self.temperature_in = Var(time,
-                                  initialize=300,
-                                  bounds=(-400, 400), 
-                                  units=units_meta('temperature'),
-                                  doc='Temperature at outlet')
+            initialize=300,
+            bounds=(-400, 400), 
+            units=units_meta('temperature'),
+            doc='Temperature at outlet')
         self.pressure_in = Var(time,
-                               initialize=1E5,
-                               bounds=(-1E6, 1E6),
-                               units=units_meta('pressure'),
-                               doc='Pressure at outlet')
+            initialize=1E5,
+            bounds=(-1E6, 1E6),
+            units=units_meta('pressure'),
+            doc='Pressure at outlet')
 
         self.inlet.add(self.flow_vol_in, 'flow_vol')
         self.inlet.add(self.conc_mass_in, 'conc_mass')
@@ -108,40 +107,40 @@ class SplitterProcessData(UnitModelBlockData):
             port_outlet = getattr(self, outlet)
             port_outlet.to_unit = to_unit
 
-            setattr(self, f'flow_vol_{outlet}', Var(time,
-                                                   initialize=0.5,
-                                                #    domain=NonNegativeReals,
-                                                   bounds=(0, 1E2),
-                                                   units=units_meta('volume') / units_meta('time'),
-                                                   doc='Volumetric flowrate of water out of splitter'))
+            setattr(self, f'flow_vol_{outlet}', 
+                    Var(time,
+                        initialize=0.5,
+                        bounds=(0, 1E2),
+                        units=units_meta('volume') / units_meta('time'),
+                        doc='Volumetric flowrate of water out of splitter'))
 
             flow_outlet = getattr(self, f'flow_vol_{outlet}')
 
-            setattr(self, f'conc_mass_{outlet}', Var(time,
-                                                    self.config.property_package.component_list,
-                                                    initialize=1E-3,
-                                                    # domain=NonNegativeReals,
-                                                    bounds=(-1E5, 1E5),
-                                                    units=units_meta('mass') / units_meta('volume'),
-                                                    doc='Mass concentration of species at outlet'))
+            setattr(self, f'conc_mass_{outlet}', 
+                    Var(time,
+                        self.config.property_package.component_list,
+                        initialize=1E-3,
+                        bounds=(-1E5, 1E5),
+                        units=units_meta('mass') / units_meta('volume'),
+                        doc='Mass concentration of species at outlet'))
             
             conc_mass_outlet  = getattr(self, f'conc_mass_{outlet}')
 
-            setattr(self, f'pressure_{outlet}', Var(time,
-                                                   initialize=1E5,
-                                                #    domain=NonNegativeReals,
-                                                   bounds=(-1E6, 1E6),
-                                                   units=units_meta('pressure'),
-                                                   doc='Pressure at outlet'))
+            setattr(self, f'pressure_{outlet}', 
+                    Var(time,
+                        initialize=1E5,
+                        bounds=(-1E6, 1E6),
+                        units=units_meta('pressure'),
+                        doc='Pressure at outlet'))
 
             pressure_outlet = getattr(self, f'pressure_{outlet}')
 
-            setattr(self, f'temperature_{outlet}', Var(time,
-                                                      initialize=300,
-                                                    #   domain=NonNegativeReals,
-                                                      bounds=(-400, 400), 
-                                                      units=units_meta('temperature'),
-                                                      doc='Temperature at outlet'))
+            setattr(self, f'temperature_{outlet}', 
+                    Var(time,
+                        initialize=300,
+                        bounds=(-400, 400), 
+                        units=units_meta('temperature'),
+                        doc='Temperature at outlet'))
 
             temperature_outlet = getattr(self, f'temperature_{outlet}')
 
@@ -150,14 +149,19 @@ class SplitterProcessData(UnitModelBlockData):
             disj_outlet = getattr(self, f'disjunct_{outlet}')
             self.disj_list.append(disj_outlet)
             
-            disj_outlet.flow = Constraint(expr=self.flow_vol_in[t] == flow_outlet[t])
-            disj_outlet.pressure = Constraint(expr=self.pressure_in[t] == pressure_outlet[t])
-            disj_outlet.temperature = Constraint(expr=self.temperature_in[t] == temperature_outlet[t])
+            disj_outlet.flow = Constraint(
+                    expr=self.flow_vol_in[t] == flow_outlet[t])
+            disj_outlet.pressure = Constraint(
+                    expr=self.pressure_in[t] == pressure_outlet[t])
+            disj_outlet.temperature = Constraint(
+                    expr=self.temperature_in[t] == temperature_outlet[t])
 
             disj_outlet.conc_mass_out = ConstraintList()
 
             for c in self.config.property_package.component_list:
-                disj_outlet.conc_mass_out.add(self.conc_mass_in[t, c] * self.flow_vol_in[t] == conc_mass_outlet[t, c] * flow_outlet[t])
+                disj_outlet.conc_mass_out.add(
+                    self.conc_mass_in[t, c] * self.flow_vol_in[t] == \
+                    conc_mass_outlet[t, c] * flow_outlet[t])
             
             port_outlet.add(flow_outlet, 'flow_vol')
             port_outlet.add(conc_mass_outlet, 'conc_mass')
@@ -178,16 +182,16 @@ class SplitterProcessData(UnitModelBlockData):
                 other_outlet_pressure = getattr(self, f'pressure_{other_outlet}')
                 other_outlet_temperature = getattr(self, f'temperature_{other_outlet}')
                 other_outlet_conc_mass = getattr(self, f'conc_mass_{other_outlet}')
-                # disj_outlet.noflow = Constraint(expr=other_outlet_flow[t] == 0)
-                # disj_outlet.nopress = Constraint(expr=other_outlet_pressure[t] == 0)
-                # disj_outlet.notemp = Constraint(expr=other_outlet_temperature[t] == 0)
 
-                setattr(disj_outlet, f'no_flow_{other_outlet}', Constraint(expr=other_outlet_flow[t] == 1E-16 * self.flow_vol_in[t]))
-                setattr(disj_outlet, f'no_press_{other_outlet}', Constraint(expr=other_outlet_pressure[t] == 1E-12 * self.pressure_in[t]))
-                setattr(disj_outlet, f'no_temp_{other_outlet}', Constraint(expr=other_outlet_temperature[t] == 1E-12 * self.temperature_in[t]))
+                setattr(disj_outlet, f'no_flow_{other_outlet}', 
+                        Constraint(expr=other_outlet_flow[t] == 1E-12 * self.flow_vol_in[t]))
+                setattr(disj_outlet, f'no_press_{other_outlet}', 
+                        Constraint(expr=other_outlet_pressure[t] == 1E-12 * self.pressure_in[t]))
+                setattr(disj_outlet, f'no_temp_{other_outlet}', 
+                        Constraint(expr=other_outlet_temperature[t] == 1E-12 * self.temperature_in[t]))
                 # disj_outlet.no_conc_mass_out = ConstraintList()
                 # for c in self.config.property_package.component_list:
-                    
-                #     disj_outlet.no_conc_mass_out.add(other_outlet_conc_mass[t, c] * other_outlet_flow[t]== 1E-16 * self.conc_mass_in[t, c] * self.flow_vol_in[t])
+                #     disj_outlet.no_conc_mass_out.add(other_outlet_conc_mass[t, c] * 
+                #         other_outlet_flow[t]== 1E-16 * self.conc_mass_in[t, c] * self.flow_vol_in[t])
                 
         self.splitter_disjunction = Disjunction(expr=self.disj_list, xor=True)
