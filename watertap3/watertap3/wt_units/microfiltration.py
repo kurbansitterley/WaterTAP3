@@ -17,23 +17,40 @@ class UnitProcess(WT3UnitProcess):
 
     def fixed_cap(self):
         time = self.flowsheet().config.time.first()
+
+        self.mf_fixed_cap = Var(initialize=10,
+                            bounds=(0, None),
+                            doc='MF Fixed Capital')
+        self.mf_cap_base = Var(initialize=1,
+                            bounds=(0, None),
+                            doc='MF Capital Basis')
+        self.mf_mem_equipment = Var(initialize=0.5,
+                            bounds=(0, None),
+                            doc='MF Membrane Equipment [$M/MGD]')
+        self.mf_equip_multiplier = Var(initialize=1,
+                            bounds=(0, None),
+                            doc='MF Equipment Multiplier [$/MGD]')
+        self.mf_cap_exp = Var(initialize=0.1,
+                            bounds=(0, None),
+                            doc='MF Capital Exponent')
+        self.chem_dict = {}
         if self.cost_method == 'twb':
-            self.chem_dict = {}
             self.flow_in = pyunits.convert(self.flow_vol_in[time], 
                 to_units=(pyunits.Mgallons / pyunits.day))
-            self.base_fixed_cap_cost = 2.5
-            self.mf_cap = self.base_fixed_cap_cost * self.flow_in
-            return self.mf_cap
+            self.mf_mem_equipment.fix(0.5)
+            self.mf_equip_multiplier.fix(5)
+            self.mf_cap_exp.fix(1)
+            self.mf_cap_base_constr = Constraint(expr=self.mf_cap_base == 
+                        self.mf_mem_equipment * self.mf_equip_multiplier)
         if self.cost_method == 'wtrnet':
-            self.chem_dict = {}
             self.flow_in = pyunits.convert(self.flow_vol_in[time], 
                 to_units=(pyunits.m**3 / pyunits.day))
-            self.base_fixed_cap_cost = 5.764633
-            self.cap_cost_exp = 0.6
-            self.mf_cap = (self.base_fixed_cap_cost * self.flow_in ** self.cap_cost_exp) * 1E-3
+            self.mf_cap_base.fix(5.764633 * 1E-3)
+            self.mf_cap_exp.fix(0.6)
             self.costing.other_var_cost = (0.015008 * self.flow_in ** 1.072667) * 1E-3
-            return self.mf_cap
-
+        self.mf_cap_constr = Constraint(expr=self.mf_fixed_cap == 
+                    self.mf_cap_base * self.flow_in ** self.mf_cap_exp)
+        return self.mf_fixed_cap
 
     def elect(self):
         self.electricity_intensity = Var(
