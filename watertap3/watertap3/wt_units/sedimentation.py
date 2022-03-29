@@ -21,7 +21,7 @@ class UnitProcess(WT3UnitProcess):
         time = self.flowsheet().config.time.first()
         self.chem_dict = {}
         self.settling_velocity = Var(
-            initialize=10, 
+            initialize=0.005, 
             units=pyunits.m/pyunits.second, 
             bounds=(0, None), 
             doc='Settling velocity [m/s]')
