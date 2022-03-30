@@ -25,7 +25,8 @@ class SystemSpecs():
         elec_cost = pd.read_csv('data/industrial_electricity_costs_2020.csv', index_col='location')
         elec_cost.index = elec_cost.index.str.lower()
         case_study = train['case_study']
-        scenario = train['scenario']
+        if 'test' in case_study:
+            case_study = 'test'
         # print(str(case_study).replace('_', ' ').swapcase() + ':', str(scenario).replace('_', ' ').swapcase())
         self.location = basis_data[basis_data['variable'] == 'location_basis'].loc[case_study].value
         self.elec_price = float(elec_cost.loc[self.location])
@@ -213,10 +214,15 @@ def get_complete_costing(costing):
             setattr(costing, f'{chem_name}_unit_price', Var(initialize=0.1,
                                                         bounds=(0, None),
                                                         doc=f'Unit Cost of {chem}'))
-            chem_var = getattr(costing, f'{chem_name}_unit_price')
-            chem_var.fix(cat_chem_df.loc[chem].Price)
+            setattr(costing, f'{chem_name}_dose', Var(initialize=0.1,
+                                                        bounds=(0, None),
+                                                        doc=f'Dose of {chem}'))
+            chem_price_var = getattr(costing, f'{chem_name}_unit_price')
+            chem_dose_var = getattr(costing, f'{chem_name}_dose')
+            chem_price_var.fix(cat_chem_df.loc[chem].Price)
+            chem_dose_var.fix(dose())
             chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * \
-                            chem_var * dose * sys_specs.plant_cap_utilization
+                            chem_price_var * chem_dose_var * sys_specs.plant_cap_utilization
 
     costing.cat_and_chem_cost = ((chem_cost_sum * 1E-6) * 
             (1 - costing.catchem_reduction)) * costing.catchem_uncertainty
