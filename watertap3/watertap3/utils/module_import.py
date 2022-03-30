@@ -197,5 +197,11 @@ def get_module(module_name):
     if module_name == 'filter_press':
         import wt_units.filter_press as up
 
+    if module_name == 'gravity_thickener':
+        import wt_units.gravity_thickener as up
+
+    if module_name == 'polymer_addition':
+        import wt_units.polymer_addition as up
+
     return up
 
