@@ -49,10 +49,6 @@ class UnitProcess(WT3UnitProcess):
 
         if 'settling_velocity' in self.unit_params.keys():
             self.settling_velocity.fix(self.unit_params['settling_velocity'])
-        if 'water_recovery' in self.unit_params.keys():
-            self.water_recovery.fix(self.unit_params['water_recovery'])
-        else:
-            self.water_recovery.fix(0.99)
 
         self.basin_surface_area_constr = Constraint(expr=
             self.basin_surface_area == pyunits.convert(
@@ -71,5 +67,5 @@ class UnitProcess(WT3UnitProcess):
                 self.tpec_tic * 1E-6,
                 doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=0,
-                                      doc='Electricity intensity [kwh/m3]')
+                                      doc='Electricity intensity [kWh/m3]')
         financials.get_complete_costing(self.costing)

@@ -21,11 +21,13 @@ class UnitProcess(WT3UnitProcess):
         self.flow_in = pyunits.convert(self.flow_vol_in[time], 
             to_units=pyunits.m**3/pyunits.hr)
 
-        self.polymer_dose = Var(initialize=1,
+        self.dose = Var(initialize=1,
             bounds=(0, None),
-            units=pyunits.mg/pyunits.liter,
-            doc='Polymer dose [mg/L]')
-        self.polymer_dose.fix(0.01)
+            units=pyunits.kg/pyunits.m**3,
+            doc='Dose [kg/m3]')
+        self.dose.fix(0.00001)
+        if 'dose' in self.unit_params.keys():
+            self.dose.fix(self.unit_params['dose'] * 1E-3)
 
         self.polymer_density = Var(initialize=1,
             bounds=(0, None),
@@ -38,9 +40,6 @@ class UnitProcess(WT3UnitProcess):
             units=pyunits.dimensionless,
             doc='Polymer ratio in solution')
         self.polymer_ratio_in_soln.fix(0.003)
-
-        if 'dose' in self.unit_params:
-            self.polymer_dose.fix(self.unit_params['dose'])
 
         self.polymer_capital_A = Var(initialize=30507,
             bounds=(0, None),
@@ -84,7 +83,7 @@ class UnitProcess(WT3UnitProcess):
 
         self.polymer_feed_rate_constr = Constraint(expr=
             self.polymer_feed_rate == pyunits.convert(
-                self.flow_in * self.polymer_dose, 
+                self.flow_in * self.dose, 
                 to_units=pyunits.lb/pyunits.day
             ))
 
@@ -95,12 +94,8 @@ class UnitProcess(WT3UnitProcess):
             to_units=pyunits.gallon/pyunits.minute)
             )
         
-        self.chem_dict = {'Anionic_Polymer': 
-            0.5 * pyunits.convert(self.polymer_dose, 
-            to_units=pyunits.kg/pyunits.m**3), 
-            'Cationic_Polymer': 
-            0.5 * pyunits.convert(self.polymer_dose, 
-            to_units=pyunits.kg/pyunits.m**3)}
+        self.chem_dict = {'Anionic_Polymer': 0.5 * self.dose, 
+                          'Cationic_Polymer': 0.5 * self.dose}
 
 
     def get_costing(self, unit_params=None, year=None):
