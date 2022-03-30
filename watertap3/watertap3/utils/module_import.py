@@ -203,5 +203,11 @@ def get_module(module_name):
     if module_name == 'polymer_addition':
         import wt_units.polymer_addition as up
 
+    if module_name == 'clarifier':
+        import wt_units.clarifier as up
+
+    if module_name == 'clearwell':
+        import wt_units.clearwell as up
+
     return up
 
