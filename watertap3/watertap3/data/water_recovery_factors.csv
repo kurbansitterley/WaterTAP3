@@ -38,12 +38,12 @@ default,,cas_denitrif,0.9999,Texas Water Development Board IT3PR User Manual
 default,,cas_nitrif,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
 default,,cation_exchange,0.9999,
 default,,caustic_soda_addition,0.9999,
-default,,coagulant_addition,0.9999,
 default,,chemical_addition,0.9999,Texas Water Development Board IT3PR User Manual
 default,,chlorination,0.9999,Based on costs for Chlorine Storage and Feed from Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)
 default,,clarifier,0.999,No specific references were identified. Based on costs for Chlorine Storage and Feed from Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)
 default,,co2_addition,0.9999,"(1) https://www.mrwa.com/WaterWorksMnl/Chapter%2012%20Coagulation.pdf, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura), (3) https://www.iwapublishing.com/news/coagulation-and-flocculation-water-and-wastewater-treatment, (4) Water and Wastewater Engineering: Design Principles and Practice (Mackenzie L. Davis)."
 default,,coag_and_floc,0.9,Based on costs for Aluminum Sulfate (Liquid Alum Feed) from Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)
+default,,coagulant_addition,0.9999,
 default,,cooling_supply,0.9999,Based on Vogtle case study data. No costs for WT3 treatment.
 default,,cooling_tower,0.25,
 default,,crystallizer,0.95,Default value based on 5% purge rate per source. Survey of High-Recovery and Zero Liquid Discharge Technologies for Water Utilities (2008).
@@ -77,6 +77,7 @@ default,,intrusion_mitigation,0.99999,"(1) https://onlinelibrary.wiley.com/doi/p
 default,,ion_exchange,calculated,
 default,,iron_and_manganese_removal,0.9999,
 default,,irrigation,0.9999,
+default,,kmno4_addition,0.9999,
 default,,landfill,0.9999,Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)
 default,,landfill_zld,0.9999,Survey of High-Recovery and Zero Liquid Discharge Technologies for Water Utilities (2008).
 default,zld,lime_addition,0.9999,Survey of High-Recovery and Zero Liquid Discharge Technologies for Water Utilities (2008).
@@ -94,14 +95,15 @@ default,,nanofiltration,0.85,Based on Vogtle case study data. No costs for WT3 t
 default,,onsite_storage,0.9999,Texas Water Development Board IT3PR User Manual
 default,,ozonation,0.9999,Texas Water Development Board IT3PR User Manual
 default,,ozone_aop,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
+default,,pac_addition,0.9999,
 default,,packed_tower_aeration,0.9999,
 upw,baseline,passthrough,0.99,
 upw,zld_a,passthrough,0.99,
 upw,zld_b,passthrough,0.99,
 upw,zld_c,passthrough,0.99,
 default,,passthrough,0.9999,
-default,,ph_decrease,0.99,
 default,,ph_adjustment,0.9999,Defined based on the Iron and Steel case study data.
+default,,ph_decrease,0.99,
 default,,ph_increase,0.9999,Defined based on the Iron and Steel case study data.
 iron_and_steel,baseline,ph_increase,0.9999,Defined based on the Iron and Steel case study data.
 default,baseline,primary_separator,0.999,Defined based on the Iron and Steel case study data.
@@ -130,8 +132,8 @@ default,,treated_storage,0.9999,DOE/NETL-2002/1169 - Process Equipment Cost Esti
 default,,tri_media_filtration,0.9,Texas Water Development Board IT3PR User Manual
 san_luis,baseline,uf_feed_pump,0.9999,Defined based on the San Luis case study data.
 default,,uf_feed_pump,0.9999,Defined based on the San Luis case study data.
-default,,ultrafiltration,0.95,Texas Water Development Board IT3PR User Manual
 default,,ultra_filtration,0.95,Texas Water Development Board IT3PR User Manual
+default,,ultrafiltration,0.95,Texas Water Development Board IT3PR User Manual
 default,,uv_aop,0.9999,Texas Water Development Board IT3PR User Manual
 default,,uv_irradiation,0.9999,Texas Water Development Board IT3PR User Manual
 default,,waiv,0.9999,

@@ -31,6 +31,9 @@ def get_module(module_name):
         
     if module_name == 'sulfuric_acid_addition':
         import wt_units.sulfuric_acid_addition as up
+
+    if module_name == 'pac_addition':
+        import wt_units.pac_addition as up
         
     if module_name == 'sodium_bisulfite_addition':
         import wt_units.sodium_bisulfite_addition as up
