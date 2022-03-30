@@ -97,7 +97,7 @@ cas_nitrif,default,baseline,kg/m3,0.998798,total_coliforms_fecal_ecoli,fractiona
 cas_nitrif,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
 chlorination,default,baseline,kg/m3,0.999148,total_coliforms_fecal_ecoli,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Coliforms (including fecal coliform and� E. Coli)
 chlorination,default,baseline,kg/m3,0.999664,viruses_enteric,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Viruses (enteric)
-clarifier,default,baseline,kg/m3,0.990826,tss,fractional_constituent_removal,nawi,"Based on ""Sedimentation"" cost model. See references in VAR. There will be minimal water losses.",Total Suspended Solids (TSS)
+clarifier,default,baseline,kg/m3,0.990826,tss,fractional_constituent_removal,nawi,"Based on ""Sedimentation"" cost model. ",Total Suspended Solids (TSS)
 coag_and_floc,default,baseline,kg/m3,0.95,tss,fractional_constituent_removal,nawi,"(1) https://www.mrwa.com/WaterWorksMnl/Chapter%2012%20Coagulation.pdf, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura), (3) https://www.iwapublishing.com/news/coagulation-and-flocculation-water-and-wastewater-treatment, (4) Water and Wastewater Engineering: Design Principles and Practice (Mackenzie L. Davis).",Total Suspended Solids (TSS)
 crystallizer,default,baseline,kg/m3,0.98,alkalinity_as_caco3,fractional_constituent_removal,nawi,default,
 crystallizer,default,baseline,kg/m3,0.98,aluminum,fractional_constituent_removal,nawi,default,
@@ -597,3 +597,5 @@ uv_irradiation,default,baseline,kg/m3,0.999994,total_coliforms_fecal_ecoli,fract
 walnut_shell_filter,default,baseline,kg/m3,0.2,nonvolatile_toc,fractional_constituent_removal,nawi,Kern County case study.,Nonvolatile TOC
 walnut_shell_filter,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Kern County case study.,Total Suspended Solids (TSS)
 walnut_shell_filter,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_value,nawi,Kern County case study.,Ultraviolet Transmittance (UVT)
+gravity_thickener,default,baseline,kg/m3,0.98,tss,fractional_constituent_removal,nawi,default,
+gravity_thickener,default,baseline,kg/m3,0.98,turbidity,fractional_constituent_removal,nawi,default,
