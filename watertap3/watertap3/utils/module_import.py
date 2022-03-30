@@ -43,6 +43,9 @@ def get_module(module_name):
     
     if module_name == 'ammonia_addition':
         import wt_units.ammonia_addition as up
+
+    if module_name == 'kmno4_addition':
+        import wt_units.kmno4_addition as up
     
     if module_name == 'municipal_drinking':
         import wt_units.municipal_drinking as up
