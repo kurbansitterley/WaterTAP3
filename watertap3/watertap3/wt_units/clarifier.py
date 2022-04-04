@@ -57,6 +57,8 @@ class UnitProcess(WT3UnitProcess):
         for k, v in self.unit_params.items():
             if k in ['residence_time', 'basin_height']:
                 getattr(self, k).fix(v)
+        if 'water_recovery' in self.unit_params.keys():
+            self.water_recovery.fix(self.unit_params['water_recovery'])
 
         self.basin_surface_area_constr = Constraint(expr=
             self.basin_surface_area == pyunits.convert(

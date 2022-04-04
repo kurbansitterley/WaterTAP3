@@ -49,6 +49,8 @@ class UnitProcess(WT3UnitProcess):
 
         if 'settling_velocity' in self.unit_params.keys():
             self.settling_velocity.fix(self.unit_params['settling_velocity'])
+        if 'water_recovery' in self.unit_params.keys():
+            self.water_recovery.fix(self.unit_params['water_recovery'])
 
         self.basin_surface_area_constr = Constraint(expr=
             self.basin_surface_area == pyunits.convert(
