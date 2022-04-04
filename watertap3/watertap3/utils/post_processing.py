@@ -529,15 +529,15 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
             category.append('Electricity')
             unit_kinds.append(unit.unit_kind)
 
-        if hasattr(unit, 'elec_int_treated'):
-            python_var.append(unit_str)
-            up_nice_name_list.append(up_nice_name)
-            python_param.append('elec_int_treated')
-            variable_list.append('Electricity Intensity System Treated')
-            value_list.append(value(unit.elec_int_treated))
-            unit_list.append('kWh/m3')
-            category.append('Electricity')
-            unit_kinds.append(unit.unit_kind)
+        # if hasattr(unit, 'elec_int_treated'):
+        #     python_var.append(unit_str)
+        #     up_nice_name_list.append(up_nice_name)
+        #     python_param.append('elec_int_treated')
+        #     variable_list.append('Electricity Intensity System Treated')
+        #     value_list.append(value(unit.elec_int_treated))
+        #     unit_list.append('kWh/m3')
+        #     category.append('Electricity')
+        #     unit_kinds.append(unit.unit_kind)
 
         if hasattr(unit, 'costing'):
             b = unit.costing

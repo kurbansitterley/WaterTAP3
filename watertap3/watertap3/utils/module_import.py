@@ -150,7 +150,7 @@ def get_module(module_name):
         import wt_units.ultrafiltration as up
 
     if module_name == 'nanofiltration':
-        import wt_units.ultrafiltration as up
+        import wt_units.nanofiltration as up
     
     if module_name == 'reverse_osmosis':
         import wt_units.reverse_osmosis as up
