@@ -214,15 +214,18 @@ def get_complete_costing(costing):
             setattr(costing, f'{chem_name}_unit_price', Var(initialize=0.1,
                                                         bounds=(0, None),
                                                         doc=f'Unit Cost of {chem}'))
-            setattr(costing, f'{chem_name}_dose', Var(initialize=0.1,
-                                                        bounds=(0, None),
-                                                        doc=f'Dose of {chem}'))
+            # setattr(costing, f'{chem_name}_dose', Var(initialize=0.1,
+            #                                             bounds=(0, None),
+            #                                             doc=f'Dose of {chem}'))
             chem_price_var = getattr(costing, f'{chem_name}_unit_price')
-            chem_dose_var = getattr(costing, f'{chem_name}_dose')
+            # chem_dose_var = getattr(costing, f'{chem_name}_dose')
             chem_price_var.fix(cat_chem_df.loc[chem].Price)
-            chem_dose_var.fix(dose())
+            # if unit.unit_type == 'chlorination':
+            #     chem_dose_var.fix(dose)
+            # else:
+            #     chem_dose_var.fix(dose())
             chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * \
-                            chem_price_var * chem_dose_var * sys_specs.plant_cap_utilization
+                            chem_price_var * dose * sys_specs.plant_cap_utilization
 
     costing.cat_and_chem_cost = ((chem_cost_sum * 1E-6) * 
             (1 - costing.catchem_reduction)) * costing.catchem_uncertainty
