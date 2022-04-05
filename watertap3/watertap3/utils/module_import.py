@@ -20,8 +20,8 @@ def get_module(module_name):
     if module_name == 'lime_softening':
         import wt_units.lime_softening as up
         
-    if module_name == 'treated_storage':
-        import wt_units.treated_storage as up
+    if module_name == 'storage_tank':
+        import wt_units.storage_tank as up
     
     if module_name == 'sedimentation':
         import wt_units.sedimentation as up
@@ -52,9 +52,6 @@ def get_module(module_name):
         
     if module_name == 'sw_onshore_intake':
         import wt_units.sw_onshore_intake as up
-        
-    if module_name == 'holding_tank':
-        import wt_units.holding_tank as up
         
     if module_name == 'tri_media_filtration':
         import wt_units.tri_media_filtration as up
