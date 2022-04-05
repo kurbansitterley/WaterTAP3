@@ -37,13 +37,13 @@ class UnitProcess(WT3UnitProcess):
             bounds=(0, None),
             units=pyunits.hour,
             doc='Storage duration [hour]')
-        self.storage_time.fix(6)
+        self.storage_time.fix(2)
 
         self.surge_capacity = Var(initialize=0.2,
             bounds=(0, None),
             units=pyunits.dimensionless,
             doc='Storage tank surge capacity [%]')
-        self.surge_capacity.fix(0.2)
+        self.surge_capacity.fix(0.1)
 
         self.storage_vol = Var(initialize=1000,
             bounds=(0, None),
