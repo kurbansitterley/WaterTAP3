@@ -12,14 +12,12 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # Capacity calculated based on storage time (user input)
 
 module_name = 'storage_tank'
-basis_year = 1998
-tpec_or_tic = 'TPEC'
 
 class UnitProcess(WT3UnitProcess):
 
     def tank_setup(self):
         time = self.flowsheet().config.time.first()
-        self.chem_dict = {}
+        
         self.flow_in = pyunits.convert(self.flow_vol_in[time], 
             to_units=pyunits.m**3/pyunits.hr)
 
@@ -58,15 +56,15 @@ class UnitProcess(WT3UnitProcess):
             self.storage_vol == self.flow_in * self.storage_time *
                 (1 + self.surge_capacity))
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
+        basis_year = 1998
         self.tank_setup()
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=
-            self.tank_capital_A * self.storage_vol ** self.tank_capital_B ,
+            self.tank_capital_A * self.storage_vol ** self.tank_capital_B,
             doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=0,
             doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing)
+        financials.get_complete_costing(self.costing, basis_year=basis_year)

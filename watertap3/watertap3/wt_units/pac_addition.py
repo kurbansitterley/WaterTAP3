@@ -9,9 +9,6 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # citation here
 
 module_name = 'pac_addition'
-basis_year = 2007
-tpec_or_tic = 'TPEC'
-
 
 class UnitProcess(WT3UnitProcess):
 
@@ -27,7 +24,7 @@ class UnitProcess(WT3UnitProcess):
             doc='PAC dose [mg/L]')
         self.pac_dose.fix(10)
 
-        if 'dose' in self.unit_params:
+        if 'dose' in self.unit_params.keys():
             self.pac_dose.fix(self.unit_params['dose'])
 
         self.pac_capital_A = Var(initialize=45190,
@@ -58,16 +55,17 @@ class UnitProcess(WT3UnitProcess):
             to_units=pyunits.kg/pyunits.m**3)}
 
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
+        basis_year = 2007
+        tpec_tic = 'TPEC'
         self.pac_setup()
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=
             (self.pac_capital_A * self.pac_feed_rate ** self.pac_capital_B) *
             self.tpec_tic * 1E-6,
             doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=0,
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+            doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)

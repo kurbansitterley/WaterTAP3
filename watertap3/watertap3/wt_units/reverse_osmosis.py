@@ -1,10 +1,9 @@
+from pydoc import doc
 from pyomo.environ import Block, Constraint, Expression, NonNegativeReals, Var, units as pyunits
 from watertap3.utils import financials
 from watertap3.wt_units.wt_unit import WT3UnitProcess
 
 module_name = 'reverse_osmosis'
-basis_year = 2007
-tpec_or_tic = 'TIC'
 
 class UnitProcess(WT3UnitProcess):
 
@@ -164,16 +163,22 @@ class UnitProcess(WT3UnitProcess):
         self.rack_support_cost_eq2 = Constraint(
                 expr=self.rack_support_cost[t] * 1.01 >= (150 + (self.membrane_area[t] * 0.025 * 5)) * 33 * 2)
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
+        basis_year = 2007
+        tpec_tic = 'TIC'
         t = self.flowsheet().config.time.first()
         time = self.flowsheet().config.time
         sys_cost_params = self.parent_block().costing_param
         self.parent_block().has_ro = True
-
+        if 'erd' in self.unit_params.keys():
+            self.erd = self.unit_params['erd']
+            if self.erd not in ['yes', 'no']:
+                self.erd = 'no'
+        else:
+            self.erd = 'no'
         self.del_component(self.outlet_pressure_constraint)
         self.del_component(self.waste_pressure_constraint)
         self.del_component(self.recovery_equation)
@@ -234,9 +239,13 @@ class UnitProcess(WT3UnitProcess):
                                                bounds=(0.01, 3),
                                                doc='replacement rate membrane fraction')
         self.pressure_vessel_cost = Var(time,
-                                         domain=NonNegativeReals)
+                                        # initialize=2e6,
+                                        bounds=(0, None),
+                                         doc='Pressure vessel cost')
         self.rack_support_cost = Var(time,
-                                      domain=NonNegativeReals)
+                                        # initialize=1e6,
+                                      bounds=(0, None),
+                                        doc='Rack support cost')
         self.factor_membrane_replacement.fix(0.25)  #
 
         # from excel regression based on paper for membrane cost y = 0.1285x - 0.0452 #R² =
@@ -274,12 +283,12 @@ class UnitProcess(WT3UnitProcess):
         self._set_constraints(t)
 
         flow_in_m3hr = pyunits.convert(self.flow_vol_in[t],
-                                       to_units=pyunits.m ** 3 / pyunits.hour)
+                                       to_units=pyunits.m**3 / pyunits.hour)
         flow_waste_m3hr = pyunits.convert(self.flow_vol_waste[t],
-                                          to_units=pyunits.m ** 3 / pyunits.hour)
+                                          to_units=pyunits.m**3 / pyunits.hour)
 
         try:
-            scaling = unit_params['scaling']
+            scaling = self.unit_params['scaling']
 
         except:
             scaling = 'no'
@@ -298,9 +307,9 @@ class UnitProcess(WT3UnitProcess):
                 setattr(self, ('%s_eq' % j), Constraint(
                         expr=self.removal_fraction[t, j] * flow_in_m3hr *
                              pyunits.convert(self.conc_mass_in[t, j],
-                                             to_units=pyunits.mg / pyunits.liter) == flow_waste_m3hr *
+                                             to_units=pyunits.mg/pyunits.liter) == flow_waste_m3hr *
                              pyunits.convert(self.conc_mass_waste[t, j],
-                                             to_units=pyunits.mg / pyunits.liter)))
+                                             to_units=pyunits.mg/pyunits.liter)))
 
         b_cost = self.costing
         b_cost.pump_capital_cost = self.pump_power * (53 / 1E5 * 3600) ** 0.97
@@ -308,12 +317,13 @@ class UnitProcess(WT3UnitProcess):
 
         ################ Energy Recovery
         # assumes atmospheric pressure out
-        if unit_params['erd'] == 'yes':
+
+        if self.erd == 'yes':
             x_value = (self.retentate.mass_flow_tds[t] + self.retentate.mass_flow_H2O[t]) / self.retentate.conc_mass_total[t] * 3600
             b_cost.erd_capital_cost = 3134.7 * (x_value * self.retentate.conc_mass_total[t]) ** 0.58
             self.erd_power = (self.flow_vol_waste[t] * (self.retentate.pressure[t] - 1) * 1E5) / self.erd_eff
 
-        if unit_params['erd'] == 'no':
+        if self.erd == 'no':
             self.erd_power = 0
 
         b_cost.erd_capital_cost = 0
@@ -347,4 +357,4 @@ class UnitProcess(WT3UnitProcess):
 
         self.chem_dict = {'unit_cost': 0.01}
 
-        financials.get_complete_costing(self.costing)
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)

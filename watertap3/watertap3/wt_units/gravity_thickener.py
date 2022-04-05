@@ -9,9 +9,6 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # citation here
 
 module_name = 'gravity_thickener'
-basis_year = 2007
-tpec_or_tic = 'TPEC'
-
 
 class UnitProcess(WT3UnitProcess):
 
@@ -19,8 +16,6 @@ class UnitProcess(WT3UnitProcess):
         t = self.flowsheet().config.time.first()
         self.flow_in = pyunits.convert(self.flow_vol_in[t], 
             to_units=pyunits.m**3/pyunits.hr)
-
-        self.chem_dict = {}
 
         self.pct_solids = Var(initialize=0.06,
             bounds=(0, None),
@@ -92,12 +87,12 @@ class UnitProcess(WT3UnitProcess):
         self.diameter_constr = Constraint(expr=self.diameter == 
             sqrt((self.area_required * 4) / 3.14159))
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
+        basis_year = 2007
         self.grav_thick_setup()
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=
             (self.grav_thick_capital_A * self.diameter ** self.grav_thick_capital_B) * 
             self.num_thickeners * 1E-6,
@@ -106,4 +101,4 @@ class UnitProcess(WT3UnitProcess):
             (self.grav_thick_energy_A * self.area_required ** self.grav_thick_energy_B * self.num_thickeners) /
             pyunits.convert(self.flow_in, to_units=pyunits.m**3/pyunits.year),
             doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing)
+        financials.get_complete_costing(self.costing, basis_year=basis_year)

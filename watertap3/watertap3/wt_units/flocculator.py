@@ -9,13 +9,10 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # 
 
 module_name = 'flocculator'
-basis_year = 2007
-tpec_or_tic = 'TPEC'
-
 
 class UnitProcess(WT3UnitProcess):
 
-    def floc_setup(self, unit_params):
+    def floc_setup(self):
         '''
 
         :return:
@@ -23,9 +20,7 @@ class UnitProcess(WT3UnitProcess):
         time = self.flowsheet().config.time
         t = time.first()
         self.flow_in = pyunits.convert(self.flow_vol_in[t], 
-            to_units=pyunits.m ** 3 / pyunits.hr)
-
-        self.chem_dict = {}
+            to_units=pyunits.m**3/pyunits.hr)
         
         self.residence_time = Var(
             initialize=10, 
@@ -109,13 +104,13 @@ class UnitProcess(WT3UnitProcess):
 
         self.floc_basin_vol_constr = Constraint(expr=self.floc_basin_vol ==
                 pyunits.convert(self.flow_in, 
-                to_units=pyunits.Mgallon / pyunits.minute) * self.residence_time)
+                to_units=pyunits.Mgallon/pyunits.minute) * self.residence_time)
 
         self.floc_mixer_power_constr = Constraint(expr=
             self.floc_mixer_power == pyunits.convert((self.g ** 2 * 
-            pyunits.convert(self.floc_basin_vol, to_units=pyunits.m**3) 
-            * self.viscosity) * self.num_mixers, to_units=pyunits.kilowatt) / 
-            self.floc_motor_eff)
+            pyunits.convert(self.floc_basin_vol,
+                to_units=pyunits.m**3) * self.viscosity) * self.num_mixers, 
+                to_units=pyunits.kilowatt) / self.floc_motor_eff)
 
         if self.vel_gradient == 20:
             self.floc_capital_A.fix(908675)
@@ -133,20 +128,18 @@ class UnitProcess(WT3UnitProcess):
             # self.floc_cap = (952902 * self.basin_volume_Mgal + 177335) * 1E-6 * self.tpec_tic
             # self.floc_cap = (1218085 * self.basin_volume_Mgal ** 0.8266) * 1E-6 * self.tpec_tic
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
-        if not isinstance(unit_params, float):
-            self.floc_setup(unit_params)
-        else:
-            self.floc_setup({})
+        basis_year = 2007
+        tpec_tic = 'TPEC'
+        self.floc_setup()
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=
                 (self.floc_capital_A * self.floc_basin_vol ** self.floc_capital_B) *
                 self.tpec_tic * 1E-6,
                 doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.floc_mixer_power / self.flow_in,
                 doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing)
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
 

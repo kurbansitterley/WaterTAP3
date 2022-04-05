@@ -27,46 +27,34 @@ class SystemSpecs():
         case_study = train['case_study']
         if 'test' in case_study:
             case_study = 'test'
-        # print(str(case_study).replace('_', ' ').swapcase() + ':', str(scenario).replace('_', ' ').swapcase())
-        self.location = basis_data[basis_data['variable'] == 'location_basis'].loc[case_study].value
+        self.location = basis_data[basis_data['variable'] == 
+            'location_basis'].loc[case_study].value
         self.elec_price = float(elec_cost.loc[self.location])
-        self.land_cost_percent_FCI = float(basis_data[basis_data['variable'] == 'land_cost_percent'].loc[case_study].value)
-        self.working_cap_percent_FCI = float(basis_data[basis_data['variable'] == 'working_capital_percent'].loc[case_study].value)
-        self.salaries_percent_FCI = float(basis_data[basis_data['variable'] == 'base_salary_per_fci'].loc[case_study].value)
-        self.maintenance_costs_percent_FCI = float(basis_data[basis_data['variable'] == 'maintenance_cost_percent'].loc[case_study].value)
-        self.lab_fees_percent_FCI = float(basis_data[basis_data['variable'] == 'laboratory_fees_percent'].loc[case_study].value)
-        self.insurance_taxes_percent_FCI = float(basis_data[basis_data['variable'] == 'insurance_and_taxes_percent'].loc[case_study].value)
-        self.benefit_percent_of_salary = float(basis_data[basis_data['variable'] == 'employee_benefits_percent'].loc[case_study].value)
-        self.plant_lifetime_yrs = int(basis_data[basis_data['variable'] == 'plant_life_yrs'].loc[case_study].value)
-        self.analysis_yr_cost_indices = int(basis_data[basis_data['variable'] == 'analysis_year'].loc[case_study].value)
-        self.debt_interest_rate = float(basis_data[basis_data['variable'] == 'debt_interest_rate'].loc[case_study].value)
-        self.plant_cap_utilization = float(basis_data[basis_data['variable'] == 'plant_cap_utilization'].loc[case_study].value)
+        self.land_cost_percent_FCI = float(basis_data[basis_data['variable'] == 
+            'land_cost_percent'].loc[case_study].value)
+        self.working_cap_percent_FCI = float(basis_data[basis_data['variable'] == 
+            'working_capital_percent'].loc[case_study].value)
+        self.salaries_percent_FCI = float(basis_data[basis_data['variable'] == 
+            'base_salary_per_fci'].loc[case_study].value)
+        self.maintenance_costs_percent_FCI = float(basis_data[basis_data['variable'] == 
+            'maintenance_cost_percent'].loc[case_study].value)
+        self.lab_fees_percent_FCI = float(basis_data[basis_data['variable'] == 
+            'laboratory_fees_percent'].loc[case_study].value)
+        self.insurance_taxes_percent_FCI = float(basis_data[basis_data['variable'] == 
+            'insurance_and_taxes_percent'].loc[case_study].value)
+        self.benefit_percent_of_salary = float(basis_data[basis_data['variable'] == 
+            'employee_benefits_percent'].loc[case_study].value)
+        self.plant_lifetime_yrs = int(basis_data[basis_data['variable'] == 
+            'plant_life_yrs'].loc[case_study].value)
+        self.analysis_yr_cost_indices = int(basis_data[basis_data['variable'] == 
+            'analysis_year'].loc[case_study].value)
+        self.debt_interest_rate = float(basis_data[basis_data['variable'] == 
+            'debt_interest_rate'].loc[case_study].value)
+        self.plant_cap_utilization = float(basis_data[basis_data['variable'] == 
+            'plant_cap_utilization'].loc[case_study].value)
 
 
-def create_costing_block(unit, basis_year, tpec_or_tic):
-    '''
-    Function to create costing block and establish basis year and TPEC/TIC factor for each
-    WaterTAP3 unit.
-
-    :param unit: WaterTAP3 unit
-    :type unit: str
-    :param basis_year: Basis year for adjusting cost calculations
-    :type basis_year: str
-    :param tpec_or_tic: either 'TPEC' or 'TIC'; determines which factor to use for FCI adjustment
-    (if necessary)
-    :type tpec_or_tic: str
-    :return:
-    '''
-    unit.costing = costing = Block()
-    costing.basis_year = basis_year
-    sys_cost_params = unit.parent_block().costing_param
-    if tpec_or_tic == 'TPEC':
-        costing.tpec_tic = unit.tpec_tic = sys_cost_params.tpec
-    else:
-        costing.tpec_tic = unit.tpec_tic = sys_cost_params.tic
-
-
-def get_complete_costing(costing):
+def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     '''
     Function to build costing block for each WaterTAP3 unit.
 
@@ -75,10 +63,17 @@ def get_complete_costing(costing):
     :return:
     '''
     unit = costing.parent_block()
+    costing.basis_year = basis_year
+    sys_cost_params = unit.parent_block().costing_param
     time = unit.flowsheet().config.time
     t = time.first()
     flow_in_m3yr = pyunits.convert(unit.flow_vol_in[t], 
             to_units=pyunits.m**3/pyunits.year)
+
+    if tpec_tic == 'TPEC':
+        unit.tpec_tic.fix(sys_cost_params.tpec)
+    elif tpec_tic == 'TIC':
+        unit.tpec_tic.fix(sys_cost_params.tic)
 
     costing.tci_reduction = Var(
             initialize=0,
@@ -211,19 +206,21 @@ def get_complete_costing(costing):
             chem_cost_sum = dose * costing.fixed_cap_inv * 1E6
         else:
             chem_name = chem.replace('(', '').replace(')', '').replace(' ', '_').replace('%', 'pct')
-            setattr(costing, f'{chem_name}_unit_price', Var(initialize=0.1,
-                                                        bounds=(0, None),
-                                                        doc=f'Unit Cost of {chem}'))
-            # setattr(costing, f'{chem_name}_dose', Var(initialize=0.1,
-            #                                             bounds=(0, None),
-            #                                             doc=f'Dose of {chem}'))
+            setattr(costing, f'{chem_name}_unit_price', \
+                Var(initialize=0.1,
+                    bounds=(0, None),
+                    doc=f'Unit Cost of {chem}'))
+            setattr(costing, f'{chem_name}_dose', \
+                Var(initialize=0.1,
+                    bounds=(0, None),
+                    doc=f'Dose of {chem}'))
             chem_price_var = getattr(costing, f'{chem_name}_unit_price')
-            # chem_dose_var = getattr(costing, f'{chem_name}_dose')
+            chem_dose_var = getattr(costing, f'{chem_name}_dose')
             chem_price_var.fix(cat_chem_df.loc[chem].Price)
-            # if unit.unit_type == 'chlorination':
-            #     chem_dose_var.fix(dose)
-            # else:
-            #     chem_dose_var.fix(dose())
+            if unit.unit_type == 'chlorination':
+                chem_dose_var.fix(dose)
+            else:
+                chem_dose_var.fix(dose())
             chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * \
                             chem_price_var * dose * sys_specs.plant_cap_utilization
 
@@ -233,14 +230,16 @@ def get_complete_costing(costing):
     # if not hasattr(costing, 'electricity_cost'):
     costing.electricity_intensity = (unit.electricity * 
         (1 - costing.elect_intens_reduction)) * costing.elect_intens_uncertainty
-    costing.electricity_cost = ((costing.electricity_intensity * flow_in_m3yr * sys_specs.electricity_price * 1E-6) * 
+    costing.electricity_cost = ((costing.electricity_intensity * \
+        flow_in_m3yr * sys_specs.electricity_price * 1E-6) * 
             sys_specs.plant_cap_utilization) * (1 - costing.elect_cost_reduction) * costing.elect_cost_uncertainty
 
     if not hasattr(costing, 'other_var_cost'):
         costing.other_var_cost = 0
 
     else:
-        costing.other_var_cost = (costing.other_var_cost * (1 - costing.other_reduction)) * costing.other_uncertainty
+        costing.other_var_cost = (costing.other_var_cost * \
+            (1 - costing.other_reduction)) * costing.other_uncertainty
 
     costing.total_cap_investment = (costing.fixed_cap_inv + costing.land_cost + costing.working_cap) * \
             (1 - costing.tci_reduction) * costing.tci_uncertainty
@@ -602,6 +601,3 @@ def global_costing_parameters(self, year=None):
             '2011': 585.7,
             '2010': 550.8
             }
-
-    self.CE_index = Param(mutable=True, initialize=ce_index_dic[year],
-                          doc='Chemical Engineering Plant Cost Index $ year')

@@ -11,15 +11,12 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 
 
 module_name = 'sedimentation'
-basis_year = 2007
-tpec_or_tic = 'TPEC'
-
 
 class UnitProcess(WT3UnitProcess):
 
     def sed_setup(self):
         time = self.flowsheet().config.time.first()
-        self.chem_dict = {}
+        
         self.settling_velocity = Var(
             initialize=0.005, 
             units=pyunits.m/pyunits.second, 
@@ -58,16 +55,17 @@ class UnitProcess(WT3UnitProcess):
                 to_units=pyunits.ft**2
             ))
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
+        basis_year = 2007
+        tpec_tic = 'TPEC'
         self.sed_setup()
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=
                 (self.sed_basin_capital_A * self.basin_surface_area ** self.sed_basin_capital_B) *
                 self.tpec_tic * 1E-6,
                 doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=0,
-                                      doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)

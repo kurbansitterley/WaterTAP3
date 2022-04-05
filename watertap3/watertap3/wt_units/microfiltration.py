@@ -11,7 +11,6 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 #   'wtrnet': Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).
 
 module_name = 'microfiltration'
-tpec_or_tic = 'TPEC'
 
 class UnitProcess(WT3UnitProcess):
 
@@ -19,27 +18,27 @@ class UnitProcess(WT3UnitProcess):
         time = self.flowsheet().config.time.first()
 
         self.mf_fixed_cap = Var(initialize=10,
-                            bounds=(0, None),
-                            doc='MF Fixed Capital')
+            bounds=(0, None),
+            doc='MF Fixed Capital')
         self.mf_cap_base = Var(initialize=1,
-                            bounds=(0, None),
-                            doc='MF Capital Basis')
+            bounds=(0, None),
+            doc='MF Capital Basis')
         self.mf_mem_equipment = Var(initialize=0.5,
-                            bounds=(0, None),
-                            doc='MF Membrane Equipment [$M/MGD]')
+            bounds=(0, None),
+            doc='MF Membrane Equipment [$M/MGD]')
         self.mf_equip_multiplier = Var(initialize=1,
-                            bounds=(0, None),
-                            doc='MF Equipment Multiplier [$/MGD]')
+            bounds=(0, None),
+            doc='MF Equipment Multiplier [$/MGD]')
         self.mf_cap_exp = Var(initialize=0.1,
-                            bounds=(0, None),
-                            doc='MF Capital Exponent')
-        self.chem_dict = {}
+            bounds=(0, None),
+            doc='MF Capital Exponent')
+        
         if self.cost_method == 'twb':
             self.flow_in = pyunits.convert(self.flow_vol_in[time], 
                 to_units=(pyunits.Mgallons / pyunits.day))
             self.mf_mem_equipment.fix(0.5)
             self.mf_equip_multiplier.fix(5)
-            self.mf_cap_exp.fix(0.7)
+            self.mf_cap_exp.fix(1)
             self.mf_cap_base_constr = Constraint(expr=self.mf_cap_base == 
                         self.mf_mem_equipment * self.mf_equip_multiplier)
             self.mf_cap_constr = Constraint(expr=self.mf_fixed_cap == 
@@ -58,26 +57,26 @@ class UnitProcess(WT3UnitProcess):
         time = self.flowsheet().config.time.first()
         
         self.flow_in = pyunits.convert(self.flow_vol_in[time], 
-                    to_units=pyunits.m**3/pyunits.hr)
+            to_units=pyunits.m**3/pyunits.hr)
         
         self.electricity_intensity = Var(
-                initialize=0.18,
-                bounds=(0, None),
-                units=pyunits.kWh/pyunits.m**3,
-                doc='MF electricity intensity [kWh/m3]')
+            initialize=0.18,
+            bounds=(0, None),
+            units=pyunits.kWh/pyunits.m**3,
+            doc='MF electricity intensity [kWh/m3]')
         
         self.pressure = Var(
-                initialize=4,
-                bounds=(0, 12),
-                units=pyunits.bar,
-                doc='MF operating pressure [bar]')
+            initialize=4,
+            bounds=(0, 12),
+            units=pyunits.bar,
+            doc='MF operating pressure [bar]')
         self.pressure.fix(5)
 
         self.pump_eff = Var(
-                initialize=0.8,
-                bounds=(0, 1),
-                units=pyunits.dimensionless,
-                doc='MF operating pressure [bar]')
+            initialize=0.8,
+            bounds=(0, 1),
+            units=pyunits.dimensionless,
+            doc='MF operating pressure [bar]')
         self.pump_eff.fix(0.8)
 
         for k, v in self.unit_params.items():
@@ -85,15 +84,15 @@ class UnitProcess(WT3UnitProcess):
                 getattr(self, k).fix(v)
 
         self.pump_power = Var(
-                initialize=1000,
-                bounds=(0, None),
-                units=pyunits.kW,
-                doc='MF pump power required [kW]')
+            initialize=1000,
+            bounds=(0, None),
+            units=pyunits.kW,
+            doc='MF pump power required [kW]')
         
         self.pump_power_constr = Constraint(expr=self.pump_power == 
-                (pyunits.convert(self.flow_in * 
-                pyunits.convert(self.pressure, to_units=pyunits.Pa),
-                to_units=pyunits.kW)) / self.pump_eff)
+            (pyunits.convert(self.flow_in * 
+            pyunits.convert(self.pressure, to_units=pyunits.Pa),
+            to_units=pyunits.kW)) / self.pump_eff)
         
         self.electricity_intensity_constr = Constraint(expr=
             self.electricity_intensity == self.pump_power /
@@ -108,11 +107,11 @@ class UnitProcess(WT3UnitProcess):
         #             pyunits.convert(self.flow_in, to_units=pyunits.m**3/pyunits.yr))
         #     return self.electricity_intensity
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        
+        tpec_tic = 'TIC'
         if 'cost_method' in self.unit_params.keys():
             self.cost_method = self.unit_params['cost_method']
             if self.cost_method not in ['twb', 'wtrnet']:
@@ -124,11 +123,11 @@ class UnitProcess(WT3UnitProcess):
         if self.cost_method == 'wtrnet':
             # self.water_recovery.fix(0.90)
             self.basis_year = 2006
-        financials.create_costing_block(self, self.basis_year, tpec_or_tic)
+        
         self.fixed_cap()
         self.elect()
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.mf_fixed_cap,
-                                                           doc='Unadjusted fixed capital investment')
+                doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.electricity_intensity,
-                                      doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=self.basis_year, tpec_tic=tpec_tic)

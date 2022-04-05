@@ -11,11 +11,13 @@ def create(m, unit_process_type, unit_process_name):
 
     cases = df[df.unit_process == unit_process_type].case_study.to_list()
     scenarios = df[df.unit_process == unit_process_type].scenario.to_list()
-    default_df = df[((df.unit_process == unit_process_type) & (df.case_study == 'default'))].recovery
+    default_df = df[((df.unit_process == unit_process_type) & \
+        (df.case_study == 'default'))].recovery
     tups = zip(cases, scenarios)
 
     if (case_study_name, scenario) in tups:
-        case_study_df = df[((df.unit_process == unit_process_type) & (df.case_study == case_study_name) & (df.scenario == scenario))]
+        case_study_df = df[((df.unit_process == unit_process_type) & \
+             (df.case_study == case_study_name) & (df.scenario == scenario))]
         if 'calculated' not in case_study_df.recovery.max():
             flow_recovery_factor = float(case_study_df.recovery)
             getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)

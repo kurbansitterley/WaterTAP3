@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pyomo.environ import Block, Expression, inequality, units as pyunits
+from pyomo.environ import Expression, units as pyunits
 from watertap3.utils import financials, ml_regression
 from watertap3.wt_units.wt_unit import WT3UnitProcess
 
@@ -8,13 +8,10 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # CAPITAL: Table 3.23 - User's Manual for Integrated Treatment Train Toolbox - Potable Reuse (IT3PR) Version 2.0
 
 module_name = 'chlorination'
-basis_year = 2014
-tpec_or_tic = 'TPEC'
-
 
 class UnitProcess(WT3UnitProcess):
 
-    def fixed_cap(self, unit_params):
+    def fixed_cap(self):
         '''
 
         :param unit_params: Unit parameters from input sheet.
@@ -22,21 +19,26 @@ class UnitProcess(WT3UnitProcess):
         '''
 
         time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time], to_units=pyunits.Mgallons / pyunits.day)
+        self.flow_in = pyunits.convert(self.flow_vol_in[time],
+            to_units=pyunits.Mgallons/pyunits.day)
         try:
-            self.contact_time = unit_params['contact_time'] * pyunits.hour
-            self.contact_time_mins = pyunits.convert(self.contact_time, to_units=pyunits.minute)
-            self.ct = unit_params['ct'] * ((pyunits.milligram * pyunits.minute)/ (pyunits.liter))
-            self.chlorine_decay_rate = unit_params['chlorine_decay_rate'] * (pyunits.milligram / (pyunits.liter * pyunits.hour))
+            self.contact_time = self.unit_params['contact_time'] * pyunits.hour
+            self.contact_time_mins = pyunits.convert(self.contact_time,
+                to_units=pyunits.minute)
+            self.ct = self.unit_params['ct'] * ((pyunits.milligram * pyunits.minute)/(pyunits.liter))
+            self.chlorine_decay_rate = self.unit_params['chlorine_decay_rate'] * \
+                pyunits.milligram /(pyunits.liter*pyunits.hour)
         except:
             self.contact_time = 1.5  * pyunits.hour
-            self.contact_time_mins = pyunits.convert(self.contact_time, to_units=pyunits.minute)
-            self.ct = 450 * ((pyunits.milligram * pyunits.minute)/ (pyunits.liter))
-            self.chlorine_decay_rate = 3.0  * (pyunits.milligram / (pyunits.liter * pyunits.hour))
+            self.contact_time_mins = pyunits.convert(self.contact_time, 
+                to_units=pyunits.minute)
+            self.ct = 450 * ((pyunits.milligram*pyunits.minute)/(pyunits.liter))
+            self.chlorine_decay_rate = 3.0  * (pyunits.milligram/(pyunits.liter*pyunits.hour))
         try:
-            self.dose = float(unit_params['dose'])
+            self.dose = float(self.unit_params['dose'])
         except:
-            self.dose = self.chlorine_decay_rate * self.contact_time + self.ct / self.contact_time_mins
+            self.dose = self.chlorine_decay_rate * self.contact_time + \
+                self.ct / self.contact_time_mins
             self.dose = float(self.dose())
         if self.dose > 25 or self.dose < 0.1:
             print(f'\n\t**ALERT**\n\tInput chlorine dose of {self.dose} mg/L is invalid.')
@@ -48,7 +50,7 @@ class UnitProcess(WT3UnitProcess):
                 print('\tInput dose changed to 0.1 mg/L.\n')
                 self.dose = 0.1
         try:
-            self.chem_name = unit_params['chemical_name']
+            self.chem_name = self.unit_params['chemical_name']
         except:
             self.chem_name = 'Chlorine'
         self.chem_dict = {self.chem_name: self.dose * 1E-3}
@@ -84,26 +86,18 @@ class UnitProcess(WT3UnitProcess):
         self.df1 = df1 = dose_cost_table[dose_cost_table.dose == self.dose]
         self.final_xs = np.hstack((0, df1.flow_mgd.values))
         self.final_ys = np.hstack((0, df1.cost.values))
-        (self.final_a, self.final_b) = ml_regression.get_cost_curve_coefs(xs=self.final_xs, ys=self.final_ys)[0]
+        (self.final_a, self.final_b) = \
+            ml_regression.get_cost_curve_coefs(xs=self.final_xs, ys=self.final_ys)[0]
         self.cl_cap = (self.final_a * self.flow_in ** self.final_b) * 1E-3
         return self.cl_cap
 
-    def elect(self):
-        '''
-        Electricity intensity.
-
-        :return: Electricity intensity [kWh/m3]
-        '''
-        electricity = 0.00005
-        return electricity
-
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(unit_params),
-                                                           doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+        basis_year = 2014
+        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
+                doc='Unadjusted fixed capital investment')
+        self.electricity = Expression(expr=0.00005,
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year)

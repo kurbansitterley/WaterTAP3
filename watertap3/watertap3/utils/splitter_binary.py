@@ -24,35 +24,35 @@ __all__ = ['SplitterBinary']
 class SplitterProcessData(UnitModelBlockData):
     CONFIG = ConfigBlock()
     CONFIG.declare("dynamic", ConfigValue(
-            domain=In([False]),
-            default=False,
-            description="Dynamic model flag - must be False",
-            doc="""Indicates whether this model will be dynamic or not,
-            **default** = False. Equilibrium Reactors do not support dynamic behavior."""))
+        domain=In([False]),
+        default=False,
+        description="Dynamic model flag - must be False",
+        doc="""Indicates whether this model will be dynamic or not,
+        **default** = False. Equilibrium Reactors do not support dynamic behavior."""))
     CONFIG.declare("has_holdup", ConfigValue(
-            default=False,
-            domain=In([False]),
-            description="Holdup construction flag - must be False",
-            doc="""Indicates whether holdup terms should be constructed or not.
-            **default** - False. Equilibrium reactors do not have defined volume, thus
-            this must be False."""))
+        default=False,
+        domain=In([False]),
+        description="Holdup construction flag - must be False",
+        doc="""Indicates whether holdup terms should be constructed or not.
+        **default** - False. Equilibrium reactors do not have defined volume, thus
+        this must be False."""))
     CONFIG.declare("property_package", ConfigValue(
-            default=useDefault,
-            domain=is_physical_parameter_block,
-            description="Property package to use for control volume",
-            doc="""Property parameter object used to define property calculations,
-            **default** - useDefault.
-            **Valid values:** {
-            **useDefault** - use default package from parent model or flowsheet,
-            **PhysicalParameterObject** - a PhysicalParameterBlock object.}"""))
+        default=useDefault,
+        domain=is_physical_parameter_block,
+        description="Property package to use for control volume",
+        doc="""Property parameter object used to define property calculations,
+        **default** - useDefault.
+        **Valid values:** {
+        **useDefault** - use default package from parent model or flowsheet,
+        **PhysicalParameterObject** - a PhysicalParameterBlock object.}"""))
     CONFIG.declare("property_package_args", ConfigBlock(
-            implicit=True,
-            description="Arguments to use for constructing property packages",
-            doc="""A ConfigBlock with arguments to be passed to a property block(s)
-            and used when constructing these,
-            **default** - None.
-            **Valid values:** {
-            see property package for documentation.}"""))
+        implicit=True,
+        description="Arguments to use for constructing property packages",
+        doc="""A ConfigBlock with arguments to be passed to a property block(s)
+        and used when constructing these,
+        **default** - None.
+        **Valid values:** {
+        see property package for documentation.}"""))
 
     def build(self):
         super(SplitterProcessData, self).build()
@@ -61,7 +61,8 @@ class SplitterProcessData(UnitModelBlockData):
         time = self.flowsheet().config.time
         t = time.first()
         units_meta = self.config.property_package.get_metadata().get_derived_units
-        self.outlet_list = outlet_list = [f'outlet_{i}' for i, _ in enumerate(split_dict.keys(), 1)]
+        self.outlet_list = outlet_list = \
+            [f'outlet_{i}' for i, _ in enumerate(split_dict.keys(), 1)]
         self.to_units = to_units = list(split_dict.keys())
         self.disj_list = []
         self.flow_outlets = []

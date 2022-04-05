@@ -8,16 +8,13 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 ## ELECTRICITY:
 # citation here
 
-module_name = 'unit'
-basis_year = 2020
-tpec_or_tic = 'TPEC'
-
+module_name = 'clearwell'
 
 class UnitProcess(WT3UnitProcess):
 
     def clearwell_setup(self):
         time = self.flowsheet().config.time.first()
-        self.chem_dict = {}
+        
         self.flow_in = pyunits.convert(self.flow_vol_in[time], 
             to_units=pyunits.Mgallons/pyunits.hour)
 
@@ -55,15 +52,15 @@ class UnitProcess(WT3UnitProcess):
             self.storage_vol == self.flow_in * self.storage_time)
 
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
+        basis_year = 2007
         self.clearwell_setup()
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=
-            (self.clearwell_capital_A * self.storage_vol ** self.clearwell_capital_B) * 1E-6,
-            doc='Unadjusted fixed capital investment')
+                (self.clearwell_capital_A * self.storage_vol ** self.clearwell_capital_B) * 1E-6,
+                doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=0,
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year)

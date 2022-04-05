@@ -1,7 +1,10 @@
+from pyomo.environ import Block, Var
+
 from . import module_import
 from .constituent_removal_water_recovery import create
 from .mixer_wt3 import Mixer
 from .source_wt3 import Source
+
 
 __all__ = ['add_unit_process',
            'add_water_source',
@@ -24,6 +27,14 @@ def add_unit_process(m=None, unit_process_name=None, unit_process_type=None, uni
         m = create(m, unit_process_type, unit_process_name)
 
     unit = getattr(m.fs, unit_process_name)
+    unit.chem_dict = {}
+    unit.costing = Block()
+    unit.tpec_tic = Var(
+        bounds=(0, None),
+        initialize=1,
+        doc='Capital factor (TPEC or TIC)')
+    unit.tpec_tic.fix(1)
+
     unit.unit_type = unit_process_type
     unit.unit_name = unit_process_name
     unit.unit_pretty_name = unit_process_name.replace('_', ' ').title().replace('Ro', 'RO').replace('Zld', 'ZLD').replace('Aop', 'AOP').replace('Uv', 'UV').replace('And', '&').replace('Sw', 'SW').replace('Gac', 'GAC').replace('Ph', 'pH').replace('Bc', 'BC').replace('Wwtp', 'WWTP').replace('Pac', 'PAC').replace('Co2', 'CO2').replace('Kmno4', 'KMnO4')
@@ -31,7 +42,7 @@ def add_unit_process(m=None, unit_process_name=None, unit_process_type=None, uni
     if isinstance(unit_params, float):
         unit_params = {}
     unit.unit_params = unit_params
-    unit.get_costing(unit_params=unit_params)
+    unit.get_costing()
 
     return m
 

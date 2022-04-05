@@ -10,12 +10,10 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 ## ELECTRICITY:
 
 module_name = 'lime_addition'
-basis_year = 2007
-tpec_or_tic = 'TPEC'
 
 class UnitProcess(WT3UnitProcess):
 
-    def fixed_cap(self, unit_params):
+    def fixed_cap(self):
         '''
         **"unit_params" are the unit parameters passed to the model from the input sheet as a Python dictionary.**
 
@@ -29,7 +27,8 @@ class UnitProcess(WT3UnitProcess):
         :return: Lime addition fixed capital cost [$MM]
         '''
         time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time], to_units=pyunits.m ** 3 / pyunits.hr)
+        self.flow_in = pyunits.convert(self.flow_vol_in[time],
+            to_units=pyunits.m**3/pyunits.hr)
         self.number_of_units = 2
         # self.base_fixed_cap_cost = 16972
         # self.cap_scaling_exp = 0.5435
@@ -59,8 +58,10 @@ class UnitProcess(WT3UnitProcess):
         self.pump_eff = 0.9 * pyunits.dimensionless
         self.motor_eff = 0.9 * pyunits.dimensionless
         self.soln_vol_flow, _ = self.solution_vol_flow()
-        self.soln_vol_flow = pyunits.convert(self.soln_vol_flow, to_units=(pyunits.gallon / pyunits.minute))
-        electricity = (0.746 * self.soln_vol_flow * self.lift_height / (3960 * self.pump_eff * self.motor_eff)) / self.flow_in
+        self.soln_vol_flow = pyunits.convert(self.soln_vol_flow,
+            to_units=(pyunits.gallon/pyunits.minute))
+        electricity = (0.746 * self.soln_vol_flow * self.lift_height / \
+            (3960 * self.pump_eff * self.motor_eff)) / self.flow_in
         return electricity
 
     def solution_vol_flow(self):
@@ -72,20 +73,23 @@ class UnitProcess(WT3UnitProcess):
 
         :return: Lime solution vol. flow [gal/day], Lime solution mass flow [lb/day]
         '''
-        self.solution_density = 1250 * (pyunits.kg / pyunits.m ** 3)
+        self.solution_density = 1250 * (pyunits.kg/pyunits.m**3)
         chemical_rate = self.flow_in * self.dose
         soln_vol_flow = chemical_rate / self.solution_density
-        chemical_rate = pyunits.convert(chemical_rate, to_units=(pyunits.lb / pyunits.day))
-        soln_vol_flow = pyunits.convert(soln_vol_flow, to_units=(pyunits.gallon / pyunits.min))
+        chemical_rate = pyunits.convert(chemical_rate,
+            to_units=(pyunits.lb/pyunits.day))
+        soln_vol_flow = pyunits.convert(soln_vol_flow,
+            to_units=(pyunits.gallon / pyunits.min))
         return soln_vol_flow, chemical_rate
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(unit_params),
-                                                           doc='Unadjusted fixed capital investment')
+        basis_year = 2007
+        tpec_tic = 'TPEC'
+        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
+                doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
