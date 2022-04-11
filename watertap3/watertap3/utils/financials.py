@@ -8,7 +8,7 @@
 ##############################################################################
 
 import pandas as pd
-from pyomo.environ import (Block, Expression, Param, Var, NonNegativeReals, units as pyunits)
+from pyomo.environ import (Block, Expression, Constraint, Param, Var, NonNegativeReals, units as pyunits)
 
 from .ml_regression import get_linear_regression
 
@@ -496,6 +496,19 @@ def get_system_costing(m_fs):
                         recovered_water_flow += b_unit.flow_vol_out[time]
 
     b.treated_water = recovered_water_flow
+    intake_str = [k for k, v in m_fs.pfd_dict.items() if v['Type'] == 'intake']
+    waste_str = [k for k, v in m_fs.pfd_dict.items() if v['Type'] == 'waste']
+
+    intakes = [unit for unit in m_fs.component_objects(Block, descend_into=False) if
+               hasattr(unit, 'flow_vol_in') and str(unit)[3:] in intake_str]
+    wastes = [unit for unit in m_fs.component_objects(Block, descend_into=False) if
+              hasattr(unit, 'flow_vol_in') and str(unit)[3:] in waste_str]
+
+    flow_ins = [getattr(intake, 'flow_vol_in')[0]() for intake in intakes]
+    flow_wastes = [getattr(waste, 'flow_vol_in')[0]() for waste in wastes]
+
+    m_fs.sys_flow_in = sum(flow_ins)
+    m_fs.sys_flow_waste = sum(flow_wastes)
 
     b.sum_of_inflow = sum_of_inflow = 0
     for key in b.parent_block().flow_in_dict.keys():
@@ -504,6 +517,7 @@ def get_system_costing(m_fs):
     b.system_recovery = b.treated_water / sum_of_inflow
 
     # LCOW for each unit
+    
     for b_unit in m_fs.component_objects(Block, descend_into=True):
         if hasattr(b_unit, 'costing'):
             setattr(b_unit, 'LCOW', Expression(
@@ -546,7 +560,6 @@ def get_system_costing(m_fs):
                          (b.treated_water * 3600 * 24 * 365),
                     doc='Unit Electricity Intensity [kWh/m3]'))
 
-    # LCOW by cost category
     b.LCOW_TCI = Expression(expr=1E6 * (b.capital_investment_total * b.capital_recovery_factor) / (
             b.treated_water * 3600 * 24 * 365 * sys_specs.plant_cap_utilization))
 

@@ -1,11 +1,14 @@
-from pyomo.environ import value
-from watertap3.utils import watertap_setup, get_case_study, run_watertap3, run_model, get_results_table
+from pyomo.environ import Constraint, value
+from watertap3.utils import *
 import pandas as pd
 import numpy as np
 
-__all__ = ['run_sensitivity', 'run_sensitivity_power', 'get_fixed_onm_reduction']
+__all__ = ['run_sensitivity', 
+           'run_sensitivity_power',
+           'get_fixed_onm_reduction']
 
-def run_sensitivity(m=None, save_results=False, return_results=False, scenario=None, case_study=None, tds_only=False):
+def run_sensitivity(m=None, save_results=False, return_results=False,
+                    scenario=None, case_study=None, tds_only=False):
 
     ro_list = ['reverse_osmosis', 'ro_first_pass', 'ro_a1', 'ro_b1',
                'ro_active', 'ro_restore', 'ro_first_stage']
@@ -951,9 +954,6 @@ def run_sensitivity(m=None, save_results=False, return_results=False, scenario=N
     print('\n====================== END SENSITIVITY ANALYSIS ======================\n')
 
 
-
-
-# 50% fixed O&M reduction scenario
 def get_fixed_onm_reduction(m = None, reduction_value_list = None, skip_small=None):
     
     print('RUNNING 50% REDUCTION IN FIXED O&M SCENARIO')
@@ -979,6 +979,7 @@ def get_fixed_onm_reduction(m = None, reduction_value_list = None, skip_small=No
         
 
     return m
+
 
 def run_sensitivity_power(m=None, save_results=False, return_results=False, return_model=False, scenario=None,
                           case_study=None):
