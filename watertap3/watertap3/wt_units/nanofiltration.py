@@ -5,10 +5,10 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 ## REFERENCES: 
 # Capital: 
 #   'twb': Texas Water Board User's Manual for Integrated Treatment Train Toolbox - Potable Reuse (IT3PR) Version 2.0.
-#    'wtrnet': Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).
+#    'poseidon': Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).
 # Electricity
 #   'twb': Plappally, A. K., & Lienhard V, J. H. (2012). doi:10.1016/j.rser.2012.05.022
-#   'wtrnet': Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).
+#   'poseidon': Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).
 
 module_name = 'nanofiltration'
 
@@ -43,7 +43,7 @@ class UnitProcess(WT3UnitProcess):
                     self.nf_mem_equipment * self.nf_equip_multiplier)
             self.nf_cap_constr = Constraint(expr=self.nf_fixed_cap == 
                     self.nf_cap_base * self.flow_in ** self.nf_cap_exp)
-        if self.cost_method == 'wtrnet':
+        if self.cost_method == 'poseidon':
             self.flow_in = pyunits.convert(self.flow_vol_in[time], 
                 to_units=(pyunits.m**3 / pyunits.day))
             self.nf_cap_base.fix(1.012361 * 1E-3)
@@ -100,7 +100,7 @@ class UnitProcess(WT3UnitProcess):
         # if self.cost_method == 'twb':
         #     self.electricity_intensity.fix(0.18)
             # return self.electricity_intensity
-        # if self.cost_method == 'wtrnet':
+        # if self.cost_method == 'poseidon':
         #     self.electricity_intensity_constr = \
         #             Constraint(expr=self.electricity_intensity ==
         #             (164.2818 * self.flow_in ** 0.999976) / 
@@ -115,16 +115,19 @@ class UnitProcess(WT3UnitProcess):
         tpec_tic = 'TIC'
         if 'cost_method' in self.unit_params.keys():
             self.cost_method = self.unit_params['cost_method']
-            if self.cost_method not in ['twb', 'wtrnet']:
-                self.cost_method = 'twb'
+            if self.cost_method not in ['twb', 'poseidon']:
+                self.cost_method = 'poseidon'
         else:
-            self.cost_method = 'twb'
+            self.cost_method = 'poseidon'
         if self.cost_method == 'twb':
             self.basis_year = 2014
-        if self.cost_method == 'wtrnet':
+        if self.cost_method == 'poseidon':
             # self.water_recovery.fix(0.83)
             self.basis_year = 2006
         
+        if 'water_recovery' in self.unit_params.keys():
+            self.water_recovery.fix(self.unit_params['water_recovery'])
+
         self.fixed_cap()
         self.elect()
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.nf_fixed_cap,

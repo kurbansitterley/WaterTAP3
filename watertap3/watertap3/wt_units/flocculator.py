@@ -99,8 +99,8 @@ class UnitProcess(WT3UnitProcess):
         
         self.g.fix(self.vel_gradient)
 
-        if self.terminal_floc:
-            self.removal_fraction[0, 'toc'].fix(0.40)
+        # if self.terminal_floc:
+        #     self.removal_fraction[0, 'toc'].fix(0.40)
 
         self.floc_basin_vol_constr = Constraint(expr=self.floc_basin_vol ==
                 pyunits.convert(self.flow_in, 
@@ -115,18 +115,12 @@ class UnitProcess(WT3UnitProcess):
         if self.vel_gradient == 20:
             self.floc_capital_A.fix(908675)
             self.floc_capital_B.fix(0.7191)
-            # self.floc_cap = (566045 * self.basin_volume_Mgal + 224745) * 1E-6 * self.tpec_tic
-            # self.floc_cap = (908675 * self.basin_volume_Mgal ** 0.7191) * 1E-6 * self.tpec_tic
         if self.vel_gradient == 50:
             self.floc_capital_A.fix(1000977)
             self.floc_capital_B.fix(0.7579)
-            # self.floc_cap = (673894 * self.basin_volume_Mgal + 217222) * 1E-6 * self.tpec_tic
-            # self.floc_cap = (1000977 * self.basin_volume_Mgal ** 0.7579) * 1E-6 * self.tpec_tic
         if self.vel_gradient == 80:
             self.floc_capital_A.fix(1218085)
             self.floc_capital_B.fix(0.8266)
-            # self.floc_cap = (952902 * self.basin_volume_Mgal + 177335) * 1E-6 * self.tpec_tic
-            # self.floc_cap = (1218085 * self.basin_volume_Mgal ** 0.8266) * 1E-6 * self.tpec_tic
 
     def get_costing(self):
         '''
