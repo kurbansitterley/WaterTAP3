@@ -1,4 +1,3 @@
-from pydoc import doc
 from pyomo.environ import Block, Constraint, Expression, NonNegativeReals, Var, units as pyunits
 from watertap3.utils import financials
 from watertap3.wt_units.wt_unit import WT3UnitProcess
@@ -167,6 +166,7 @@ class UnitProcess(WT3UnitProcess):
         '''
         Initialize the unit in WaterTAP3.
         '''
+
         basis_year = 2007
         tpec_tic = 'TIC'
         t = self.flowsheet().config.time.first()
@@ -317,7 +317,6 @@ class UnitProcess(WT3UnitProcess):
 
         ################ Energy Recovery
         # assumes atmospheric pressure out
-
         if self.erd == 'yes':
             x_value = (self.retentate.mass_flow_tds[t] + self.retentate.mass_flow_H2O[t]) / self.retentate.conc_mass_total[t] * 3600
             b_cost.erd_capital_cost = 3134.7 * (x_value * self.retentate.conc_mass_total[t]) ** 0.58
