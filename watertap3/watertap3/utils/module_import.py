@@ -24,6 +24,9 @@ def get_module(module_name):
     if module_name == 'backwash_solids_handling':
         import wt_units.backwash_solids_handling as up
 
+    if module_name == 'band_screen':
+        import wt_units.band_screen as up
+
     if module_name == 'basic_unit':
         import wt_units.basic_unit as up
 
@@ -69,6 +72,9 @@ def get_module(module_name):
     if module_name == 'deep_well_injection':
         import wt_units.deep_well_injection as up
 
+    if module_name == 'drum_screen':
+        import wt_units.drum_screen as up
+
     if module_name == 'electrodialysis_reversal':
         import wt_units.electrodialysis_reversal as up
 
@@ -102,6 +108,9 @@ def get_module(module_name):
     if module_name == 'gravity_thickener':
         import wt_units.gravity_thickener as up
 
+    if module_name == 'grit_chamber':
+        import wt_units.grit_chamber as up
+
     if module_name == 'heap_leaching':
         import wt_units.heap_leaching as up
 
@@ -131,6 +140,9 @@ def get_module(module_name):
 
     if module_name == 'media_filtration':
         import wt_units.media_filtration as up
+
+    if module_name == 'micro_screen':
+        import wt_units.micro_screen as up
 
     if module_name == 'microfiltration':
         import wt_units.microfiltration as up
@@ -203,6 +215,9 @@ def get_module(module_name):
         
     if module_name == 'well_field':
         import wt_units.well_field as up
+    
+    if module_name == 'wire_screen':
+        import wt_units.wire_screen as up
 
     return up
 

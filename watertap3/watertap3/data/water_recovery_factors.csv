@@ -19,6 +19,7 @@ default,,anion_exchange,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-wate
 default,,anion_exchange_epa,calculated,No specific references were identified. Costs are based on seemingly comparable addition systems. 
 default,,anti_scalant_addition,0.9999,Based on costs for Solids Handling in Table 5.7.1 in Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura). Recovery is an assumption considering recovered solids will have moisture content.
 default,,backwash_solids_handling,0.95,Texas Water Development Board IT3PR User Manual
+default,,band_screen,0.99999,"Voutchkov, N. (2018). Desalination Project Cost Estimating and Management. Taylor & Francis, a CRC title, part of the Taylor & Francis imprint, a member of the Taylor & Francis Group, the academic division of T&F Informa, plc."
 san_luis,baseline,bio_active_filtration,0.99,Defined based on the San Luis case study data.
 default,,bio_active_filtration,0.99,Defined based on the San Luis case study data.
 default,,bioreactor,0.97,Defined based on the San Luis case study data.
@@ -54,6 +55,7 @@ default,,discharge,0.9999,Beef Processing case study.
 default,,dissolved_air_flotation,0.9999,"(1) https://www.engineeringtoolbox.com/water-pumping-costs-d_1527.html, (2) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (3) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)"
 default,,drainage_sump_pump1,0.9999,"(1) https://www.engineeringtoolbox.com/water-pumping-costs-d_1527.html, (2) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (3) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)"
 default,,drainage_sump_pump2,0.9999,"(1) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)"
+default,,drum_screen,0.99999,"Voutchkov, N. (2018). Desalination Project Cost Estimating and Management. Taylor & Francis, a CRC title, part of the Taylor & Francis imprint, a member of the Taylor & Francis Group, the academic division of T&F Informa, plc."
 default,,dual_media_filtration,0.99,Placeholder. Not utilized in any case studies. 
 default,,electrocoagulation,0.99,Texas Water Development Board IT3PR User Manual
 default,,electrodialysis_reversal,0.9214,Texas Water Development Board IT3PR User Manual
@@ -85,6 +87,7 @@ default,zld,lime_addition,0.9999,Survey of High-Recovery and Zero Liquid Dischar
 default,,lime_softening,0.999,Texas Water Development Board IT3PR User Manual
 default,,mbr_nitrification,0.9999,"(1) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)"
 default,,media_filtration,0.99,"Voutchkov, N. (2018). Desalination Project Cost Estimating and Management. Taylor & Francis, a CRC title, part of the Taylor & Francis imprint, a member of the Taylor & Francis Group, the academic division of T&F Informa, plc."
+default,,micro_screen,0.99999,"Voutchkov, N. (2018). Desalination Project Cost Estimating and Management. Taylor & Francis, a CRC title, part of the Taylor & Francis imprint, a member of the Taylor & Francis Group, the academic division of T&F Informa, plc."
 default,,microfiltration,0.95,Texas Water Development Board IT3PR User Manual
 default,,microscreen_filtration,0.99999,
 default,,mining,0.9999,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models
@@ -141,3 +144,5 @@ default,,waiv,0.9999,
 default,,walnut_shell_filter,0.99,Defined based on the Kern County case study data.
 default,,water_pumping_station,0.9999,"(1) https://www.engineeringtoolbox.com/water-pumping-costs-d_1527.html, (2) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (3) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura)"
 default,,well_field,0.9999,"Voutchkov, N. (2018). Desalination Project Cost Estimating and Management. Taylor & Francis, a CRC title, part of the Taylor & Francis imprint, a member of the Taylor & Francis Group, the academic division of T&F Informa, plc."
+default,,wire_screen,0.99999,"Voutchkov, N. (2018). Desalination Project Cost Estimating and Management. Taylor & Francis, a CRC title, part of the Taylor & Francis imprint, a member of the Taylor & Francis Group, the academic division of T&F Informa, plc."
+default,,grit_chamber,0.99999,Poseidon
