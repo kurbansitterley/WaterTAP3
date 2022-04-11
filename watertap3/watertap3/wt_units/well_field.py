@@ -1,12 +1,12 @@
 from pyomo.environ import Expression, Var, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 
 ## REFERENCE: Derived from Voutchkov (2018) Table 4.6 and 4.7
 
 module_name = 'well_field'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessPT):
 
     def fixed_cap(self):
         self.pipe_cost_factor_dict = {'emwd': 82600}

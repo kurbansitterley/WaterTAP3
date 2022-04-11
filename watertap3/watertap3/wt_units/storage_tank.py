@@ -1,6 +1,6 @@
 from pyomo.environ import Var, Constraint, Expression, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 
 ## REFERENCE
 ## CAPITAL:
@@ -13,7 +13,7 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 
 module_name = 'storage_tank'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessPT):
 
     def tank_setup(self):
         time = self.flowsheet().config.time.first()

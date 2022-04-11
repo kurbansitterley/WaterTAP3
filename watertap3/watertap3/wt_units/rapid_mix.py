@@ -1,6 +1,6 @@
 from pyomo.environ import Constraint, Expression, Var, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 
 ## REFERENCE
 ## CAPITAL:
@@ -10,7 +10,7 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 
 module_name = 'rapid_mix'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessPT):
 
     def rapid_mix_setup(self):
         '''

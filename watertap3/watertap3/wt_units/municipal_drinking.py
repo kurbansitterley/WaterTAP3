@@ -1,12 +1,12 @@
 from pyomo.environ import Expression, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 
 ## REFERENCE: McGivney & Kawamura (2008) - Figure 5.5.35b
 
 module_name = 'municipal_drinking'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessPT):
 
     def fixed_cap(self):
         time = self.flowsheet().config.time.first()
