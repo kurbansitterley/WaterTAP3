@@ -2,14 +2,14 @@ import numpy as np
 import pandas as pd
 from pyomo.environ import Expression, units as pyunits
 from watertap3.utils import financials, ml_regression
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 
 ## REFERENCE: 
 # CAPITAL: Table 3.23 - User's Manual for Integrated Treatment Train Toolbox - Potable Reuse (IT3PR) Version 2.0
 
 module_name = 'chlorination'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessSISO):
 
     def fixed_cap(self):
         '''

@@ -12,6 +12,7 @@ from .source_wt3 import Source
 from watertap3.utils import Mixer, Splitter, SplitterBinary, financials
 from .water_props import WaterParameterBlock
 from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
+from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 
 __all__ = [
            'watertap3_setup',
@@ -302,6 +303,8 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
     wr_df = pd.read_csv('data/water_recovery_factors.csv')
     case_study_name = m.fs.train['case_study']
     scenario = m.fs.train['scenario']
+    unit = getattr(m.fs, unit_process_name)
+
 
     cases = wr_df[wr_df.unit_process == unit_process_type].case_study.to_list()
     scenarios = wr_df[wr_df.unit_process == unit_process_type].scenario.to_list()
@@ -309,27 +312,31 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
         (wr_df.case_study == 'default'))].recovery
     tups = zip(cases, scenarios)
 
-    if (case_study_name, scenario) in tups:
-        case_study_df = wr_df[((wr_df.unit_process == unit_process_type) & \
-             (wr_df.case_study == case_study_name) & (wr_df.scenario == scenario))]
-        if 'calculated' not in case_study_df.recovery.max():
-            flow_recovery_factor = float(case_study_df.recovery)
-            getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
-    else:
-        if default_df.empty:
-            raise TypeError(f'There is no default water recovery for {unit_process_type}.\n'
-                            'Check that there is an entry for this unit in water_recovery.csv')
-        if 'calculated' not in default_df.max():
-            flow_recovery_factor = float(default_df)
-            getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
+    if not isinstance(unit, WT3UnitProcessSISO):
+
+        if (case_study_name, scenario) in tups:
+            case_study_df = wr_df[((wr_df.unit_process == unit_process_type) & \
+                (wr_df.case_study == case_study_name) & (wr_df.scenario == scenario))]
+            if 'calculated' not in case_study_df.recovery.max():
+                flow_recovery_factor = float(case_study_df.recovery)
+                getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
+        else:
+            if default_df.empty:
+                raise TypeError(f'There is no default water recovery for {unit_process_type}.\n'
+                                'Check that there is an entry for this unit in water_recovery.csv')
+            if 'calculated' not in default_df.max():
+                flow_recovery_factor = float(default_df)
+                getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
 
     train_constituent_removal_factors = \
         get_removal_factors()
 
     for constituent_name in getattr(m.fs, unit_process_name).config.property_package.component_list:
-        unit = getattr(m.fs, unit_process_name)
+        
         if constituent_name in train_constituent_removal_factors.keys():
             unit.removal_fraction[:, constituent_name].fix(train_constituent_removal_factors[constituent_name])
+        elif isinstance(unit, WT3UnitProcessSISO):
+            unit.removal_fraction[:, constituent_name].fix(0)
         else:
             unit.removal_fraction[:, constituent_name].fix(1E-5)
     return m

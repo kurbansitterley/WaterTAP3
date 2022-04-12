@@ -10,11 +10,11 @@ from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.environ import Var, units as pyunits
 from pyomo.network import Port
 
-__all__ = ['WT3UnitProcessPT']
+__all__ = ['WT3UnitProcessSISO']
 
 
-@declare_process_block_class('WT3UnitProcessPT')
-class WT3UnitProcessPTData(UnitModelBlockData):
+@declare_process_block_class('WT3UnitProcessSISO')
+class WT3UnitProcessSISOData(UnitModelBlockData):
     '''
     This class describes the rules for a zeroth-order model for a unit
 
@@ -63,7 +63,7 @@ class WT3UnitProcessPTData(UnitModelBlockData):
         see property package for documentation.}'''))
 
     def build(self):
-        super(WT3UnitProcessPTData, self).build()
+        super(WT3UnitProcessSISOData, self).build()
         units_meta = self.config.property_package.get_metadata().get_derived_units
         time = self.flowsheet().config.time
 
@@ -112,6 +112,12 @@ class WT3UnitProcessPTData(UnitModelBlockData):
 
         self.deltaP_outlet.fix(0)
 
+        self.removal_fraction = Var(time,
+            self.config.property_package.component_list,
+            initialize=0.01,
+            units=pyunits.dimensionless,
+            doc='Component removal fraction')
+
         @self.Constraint(time, doc='Outlet pressure equation')
         def outlet_pressure_constraint(b, t):
             return (b.pressure_in[t] + b.deltaP_outlet[t] ==
@@ -125,23 +131,26 @@ class WT3UnitProcessPTData(UnitModelBlockData):
                          self.config.property_package.component_list,
                          doc='Component removal equation')
         def component_removal_equation(b, t, j):
-            return (b.flow_vol_in[t] * b.conc_mass_in[t, j]  ==
+            return ((1 - b.removal_fraction[t, j]) * b.flow_vol_in[t] * b.conc_mass_in[t, j]  ==
                     b.flow_vol_out[t] * b.conc_mass_out[t, j])
 
+        #
         @self.Constraint(time, doc='Outlet temperature equation')
         def outlet_temperature_constraint(b, t):
             return b.temperature_in[t] == b.temperature_out[t]
 
         self.inlet = Port(noruleinit=True, doc='Inlet Port')
+
+        # Populate Port with inlet variables
         self.inlet.add(self.flow_vol_in, 'flow_vol')
         self.inlet.add(self.conc_mass_in, 'conc_mass')
         self.inlet.add(self.temperature_in, 'temperature')
         self.inlet.add(self.pressure_in, 'pressure')
 
+        # Add Ports for outlet and waste streams
         self.outlet = Port(noruleinit=True, doc='Outlet Port')
         self.outlet.add(self.flow_vol_out, 'flow_vol')
         self.outlet.add(self.conc_mass_out, 'conc_mass')
         self.outlet.add(self.temperature_out, 'temperature')
         self.outlet.add(self.pressure_out, 'pressure')
-
         

@@ -1,6 +1,6 @@
 from pyomo.environ import Var, Constraint, Expression, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
@@ -17,7 +17,7 @@ from scipy.optimize import curve_fit
 
 module_name = 'ozone_aop'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessSISO):
 
     def ozone_aop_setup(self):
         time = self.flowsheet().config.time.first()

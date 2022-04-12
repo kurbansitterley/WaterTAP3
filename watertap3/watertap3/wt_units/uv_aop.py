@@ -2,7 +2,7 @@ import pandas as pd
 from pyomo.environ import Expression, Constraint, Var, Param, units as pyunits
 from scipy.optimize import curve_fit
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 
 ## REFERENCE:
 ## CAPITAL
@@ -12,7 +12,7 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 
 module_name = 'uv_aop'
 
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessSISO):
 
     def fixed_cap(self):
         '''
