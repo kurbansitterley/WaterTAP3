@@ -145,7 +145,7 @@ class UnitProcess(WT3UnitProcessSISO):
         else:
             self.ox_elect = 0
 
-        return self.EEO + self.ox_elect
+        return (self.EEO * self.order_of_mag_removal) + self.ox_elect
 
     def uv_regress(self):
         '''

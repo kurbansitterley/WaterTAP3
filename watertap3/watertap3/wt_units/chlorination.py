@@ -35,11 +35,11 @@ class UnitProcess(WT3UnitProcessSISO):
             self.ct = 450 * ((pyunits.milligram*pyunits.minute)/(pyunits.liter))
             self.chlorine_decay_rate = 3.0  * (pyunits.milligram/(pyunits.liter*pyunits.hour))
         try:
-            self.dose = float(self.unit_params['dose'])
+            self.dose = round(float(self.unit_params['dose']), 1)
         except:
             self.dose = self.chlorine_decay_rate * self.contact_time + \
                 self.ct / self.contact_time_mins
-            self.dose = float(self.dose())
+            self.dose = round(float(self.dose()), 1)
         if self.dose > 25 or self.dose < 0.1:
             print(f'\n\t**ALERT**\n\tInput chlorine dose of {self.dose} mg/L is invalid.')
             print('\tCost curve valid only for chlorine dose 0.1 - 25 mg/L')

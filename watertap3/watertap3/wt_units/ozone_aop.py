@@ -1,4 +1,4 @@
-from pyomo.environ import Var, Constraint, Expression, units as pyunits
+from pyomo.environ import Var, Constraint, Expression, value, units as pyunits
 from watertap3.utils import financials
 from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 import pandas as pd
@@ -69,14 +69,14 @@ class UnitProcess(WT3UnitProcessSISO):
 
         if self.aop:
             if 'dose' in self.unit_params.keys():
-                self.ox_dose.fix(pyunits.convert(self.unit_params['dose'],
-                    to_units=pyunits.kg/pyunits.m**3))
-            if 'dose' not in self.unit_params.keys():
+                self.ox_dose.fix(value(pyunits.convert(self.unit_params['dose']*pyunits.mg/pyunits.L,
+                    to_units=pyunits.kg/pyunits.m**3)))
+            elif 'dose' not in self.unit_params.keys():
                 self.ox_dose_constr = Constraint(
                     expr=self.ox_dose == pyunits.convert((0.5 * self.o3_toc_ratio * self.toc_in), 
                     to_units=(pyunits.kg/pyunits.m**3)))
             else:
-                self.ox
+                self.ox_dose = 0
             if 'chemical_name' in self.unit_params.keys():
                 self.chem_name = self.unit_params['chemical_name']
             else:
@@ -175,7 +175,7 @@ class UnitProcess(WT3UnitProcessSISO):
 
         :return: Oxidant solution flow [lb/day]
         '''
-        chemical_rate = self.flow_in * self.ox_dose  # kg/hr
+        chemical_rate = self.flow_in * self.ox_dose  
         chemical_rate = pyunits.convert(chemical_rate,
             to_units=(pyunits.lb/pyunits.day))
         return chemical_rate

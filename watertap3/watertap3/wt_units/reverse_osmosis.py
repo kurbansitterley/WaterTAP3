@@ -284,6 +284,8 @@ class UnitProcess(WT3UnitProcess):
 
         flow_in_m3hr = pyunits.convert(self.flow_vol_in[t],
                                        to_units=pyunits.m**3 / pyunits.hour)
+        flow_out_m3hr = pyunits.convert(self.flow_vol_out[t],
+                                          to_units=pyunits.m**3 / pyunits.hour)
         flow_waste_m3hr = pyunits.convert(self.flow_vol_waste[t],
                                           to_units=pyunits.m**3 / pyunits.hour)
 
@@ -296,13 +298,27 @@ class UnitProcess(WT3UnitProcess):
         for j in self.const_list2:
             if scaling == 'yes':
                 self.del_component(self.component_mass_balance)
+                # setattr(self, ('%s_eq1' % j), Constraint(
+                #         expr=self.flow_vol_in[t] * self.conc_mass_in[t, j] == self.flow_vol_out[t] *
+                #              self.conc_mass_out[t, j] + self.flow_vol_waste[t] * self.conc_mass_waste[t, j]))
+
+                # setattr(self, ('%s_eq' % j), Constraint(
+                #         expr=self.removal_fraction[t, j] * self.flow_vol_in[t] * self.conc_mass_in[t, j] == self.flow_vol_waste[t] * self.conc_mass_waste[t, j]))
                 setattr(self, ('%s_eq1' % j), Constraint(
-                        expr=self.flow_vol_in[t] * self.conc_mass_in[t, j] == self.flow_vol_out[t] *
-                             self.conc_mass_out[t, j] + self.flow_vol_waste[t] * self.conc_mass_waste[t, j]))
-
+                        expr=flow_in_m3hr * pyunits.convert(self.conc_mass_in[t, j],
+                                             to_units=pyunits.mg/pyunits.liter) == 
+                            flow_out_m3hr *
+                             pyunits.convert(self.conc_mass_out[t, j],
+                                             to_units=pyunits.mg/pyunits.liter) + 
+                            flow_waste_m3hr * 
+                            pyunits.convert(self.conc_mass_out[t, j],
+                                             to_units=pyunits.mg/pyunits.liter)))
                 setattr(self, ('%s_eq' % j), Constraint(
-                        expr=self.removal_fraction[t, j] * self.flow_vol_in[t] * self.conc_mass_in[t, j] == self.flow_vol_waste[t] * self.conc_mass_waste[t, j]))
-
+                        expr=self.removal_fraction[t, j] * flow_in_m3hr *
+                             pyunits.convert(self.conc_mass_in[t, j],
+                                             to_units=pyunits.mg/pyunits.liter) == flow_waste_m3hr *
+                             pyunits.convert(self.conc_mass_waste[t, j],
+                                             to_units=pyunits.mg/pyunits.liter)))
             else:
                 setattr(self, ('%s_eq' % j), Constraint(
                         expr=self.removal_fraction[t, j] * flow_in_m3hr *

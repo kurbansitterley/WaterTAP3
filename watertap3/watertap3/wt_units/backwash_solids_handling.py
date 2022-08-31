@@ -25,8 +25,6 @@ class UnitProcess(WT3UnitProcess):
             self.conc_mass_tot += self.conc_mass_in[time, constituent]
         self.density = 0.6312 * self.conc_mass_tot + 997.86
         self.total_mass = self.density * self.flow_in
-        
-
         backwash_cap = self.base_fixed_cap_cost * (self.total_mass / self.capacity_basis) ** self.cap_scaling_exp
         return backwash_cap
 

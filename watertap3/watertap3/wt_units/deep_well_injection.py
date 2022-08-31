@@ -61,7 +61,6 @@ class UnitProcess(WT3UnitProcessPT):
         :return: Electricity intensity [kWh/m3]
         '''
         t = self.flowsheet().config.time.first()
-        time = self.flowsheet().config.time
         self.pump_eff = 0.9
         self.motor_eff = 0.9
         flow_in_gpm = pyunits.convert(self.flow_in,

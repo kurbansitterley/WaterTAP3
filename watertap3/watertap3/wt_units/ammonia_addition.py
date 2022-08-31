@@ -28,7 +28,7 @@ class UnitProcess(WT3UnitProcessPT):
         time = self.flowsheet().config.time.first()
         self.flow_in = pyunits.convert(self.flow_vol_in[time],
             to_units=pyunits.m**3/pyunits.hr)
-        self.number_of_units = 2
+        self.number_of_units = 1
         self.base_fixed_cap_cost = 6699.1
         self.cap_scaling_exp = 0.4219
         chem_name = 'Ammonia'
@@ -71,17 +71,17 @@ class UnitProcess(WT3UnitProcessPT):
         '''
         self.solution_density = 900 * (pyunits.kg/pyunits.m**3)
         self.ratio_in_solution = 0.3 * pyunits.dimensionless
-        chemical_rate = self.flow_in * self.dose
-        chemical_rate = pyunits.convert(chemical_rate, to_units=(pyunits.kg/pyunits.day))
-        soln_vol_flow = chemical_rate / self.solution_density / self.ratio_in_solution
-        soln_vol_flow = pyunits.convert(soln_vol_flow, to_units=pyunits.gallon/pyunits.day)
+        self.chemical_rate = self.flow_in * self.dose
+        self.chemical_rate = pyunits.convert(self.chemical_rate, to_units=(pyunits.kg/pyunits.day))
+        self.soln_vol_flow = self.chemical_rate / self.solution_density / self.ratio_in_solution
+        soln_vol_flow = pyunits.convert(self.soln_vol_flow, to_units=pyunits.gallon/pyunits.day)
         return soln_vol_flow
 
     def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        basis_year = 2007
+        basis_year = 2020
         tpec_tic = 'TPEC'
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
                 doc='Unadjusted fixed capital investment')

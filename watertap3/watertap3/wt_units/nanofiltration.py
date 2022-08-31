@@ -48,7 +48,8 @@ class UnitProcess(WT3UnitProcess):
                 to_units=(pyunits.m**3 / pyunits.day))
             self.nf_cap_base.fix(1.012361 * 1E-3)
             self.nf_cap_exp.fix(0.844997)
-            self.costing.other_var_cost = (0.001879 * self.flow_in ** 1.353971) * 1E-3
+            # self.costing.other_var_cost = (0.001879 * self.flow_in ** 1.353971) * 1E-3
+            self.costing.other_var_cost = (0.001879 * self.flow_in ** 0.7) * 1E-3
             self.nf_cap_constr = Constraint(expr=self.nf_fixed_cap == self.tpec_tic *
                         (self.nf_cap_base * self.flow_in ** self.nf_cap_exp))
 
@@ -75,7 +76,7 @@ class UnitProcess(WT3UnitProcess):
             initialize=0.8,
             bounds=(0, 1),
             units=pyunits.dimensionless,
-            doc='NF pump efficiency ')
+            doc='NF pump efficiency')
         self.pump_eff.fix(0.8)
 
         for k, v in self.unit_params.items():

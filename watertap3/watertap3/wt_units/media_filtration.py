@@ -122,21 +122,21 @@ class UnitProcess(WT3UnitProcess):
             to_units=pyunits.ft**2))
 
         self.media_capital_constr = Constraint(expr=
-            self.media_cost == self.media_capital_A * self.filter_surface_area ** self.media_capital_B)
+            self.media_cost == (self.media_capital_A * self.filter_surface_area ** self.media_capital_B) * 1E-6)
 
         self.backwash_cost_constr = Constraint(expr=
             self.filter_backwash_cost == 
-            (self.backwash_capital_A * self.filter_surface_area ** self.backwash_capital_B) * 
-            (1 - self.water_recovery[time]))
+            ((self.backwash_capital_A * self.filter_surface_area ** self.backwash_capital_B) * 
+            (1 - self.water_recovery[time])) * 1E-6)
 
         self.structure_cost_constr = Constraint(expr=
-            self.filter_structure_cost == self.structure_capital_A * \
-                self.filter_surface_area ** self.structure_capital_B)
+            self.filter_structure_cost == (self.structure_capital_A * \
+                self.filter_surface_area ** self.structure_capital_B) * 1E-6)
 
         self.media_filter_fixed_cap_constr = Constraint(expr=
             self.media_filter_fixed_cap == #self.tpec_tic * \
             ((self.media_cost + self.filter_structure_cost + self.filter_backwash_cost) 
-            * self.number_units) * 1E-6)
+            * self.number_units))
 
 
     def get_costing(self):
