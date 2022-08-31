@@ -7,7 +7,7 @@ import idaes.logger as idaeslog
 from idaes.core import (UnitModelBlockData, declare_process_block_class, useDefault)
 from idaes.core.util.config import is_physical_parameter_block
 from pyomo.common.config import ConfigBlock, ConfigValue, In
-from pyomo.environ import NonNegativeReals, SolverFactory, Var, units as pyunits
+from pyomo.environ import Var, units as pyunits
 from pyomo.network import Port
 
 __all__ = ['WT3UnitProcess']
@@ -28,37 +28,39 @@ class WT3UnitProcessData(UnitModelBlockData):
     '''
 
     CONFIG = ConfigBlock()
-    CONFIG.declare('dynamic', ConfigValue(domain=In([False]), default=False,
-                                          description='Dynamic model flag - must be False',
-                                          doc='''Indicates whether this model will be dynamic or 
-                                          not,
-                                          **default** = False. Equilibrium Reactors do not 
-                                          support dynamic behavior.'''))
-    CONFIG.declare('has_holdup', ConfigValue(default=False, domain=In([False]),
-                                             description='Holdup construction flag - must be False',
-                                             doc='''Indicates whether holdup terms should be 
-                                             constructed or not.
-                                            **default** - False. Equilibrium reactors do not have defined volume, thus
-                                            this must be False.'''))
+    CONFIG.declare('dynamic', ConfigValue(domain=In([False]), 
+        default=False,
+        description='Dynamic model flag - must be False',
+        doc='''Indicates whether this model will be dynamic or 
+        not,
+        **default** = False. Equilibrium Reactors do not 
+        support dynamic behavior.'''))
+    CONFIG.declare('has_holdup', ConfigValue(default=False, 
+        domain=In([False]),
+        description='Holdup construction flag - must be False',
+        doc='''Indicates whether holdup terms should be 
+        constructed or not.
+        **default** - False. Equilibrium reactors do not have defined volume, thus
+        this must be False.'''))
     CONFIG.declare('property_package', ConfigValue(default=useDefault,
-                                                   domain=is_physical_parameter_block,
-                                                   description='Property package to use for control volume',
-                                                   doc='''Property parameter object used to define property 
-                                                   calculations,
-                                                    **default** - useDefault.
-                                                    **Valid values:** {
-                                                    **useDefault** - use default package from parent model or flowsheet,
-                                                    **PhysicalParameterObject** - a PhysicalParameterBlock object.}'''))
+        domain=is_physical_parameter_block,
+        description='Property package to use for control volume',
+        doc='''Property parameter object used to define property 
+        calculations,
+        **default** - useDefault.
+        **Valid values:** {
+        **useDefault** - use default package from parent model or flowsheet,
+        **PhysicalParameterObject** - a PhysicalParameterBlock object.}'''))
     CONFIG.declare('property_package_args', ConfigBlock(implicit=True,
-                                                        description='Arguments to use for '
-                                                                    'constructing property '
-                                                                    'packages',
-                                                        doc='''A ConfigBlock with arguments to be 
-                                                        passed to a property block(s)
-                                                        and used when constructing these,
-                                                        **default** - None.
-                                                        **Valid values:** {
-                                                        see property package for documentation.}'''))
+        description='Arguments to use for '
+                    'constructing property '
+                    'packages',
+        doc='''A ConfigBlock with arguments to be 
+        passed to a property block(s)
+        and used when constructing these,
+        **default** - None.
+        **Valid values:** {
+        see property package for documentation.}'''))
 
     def build(self):
         super(WT3UnitProcessData, self).build()
@@ -67,97 +69,83 @@ class WT3UnitProcessData(UnitModelBlockData):
 
         ## INLET
         self.flow_vol_in = Var(time,
-                               initialize=1,
-                            #    domain=NonNegativeReals,
-                               units=units_meta('volume') / units_meta('time'),
-                               bounds=(0, 1E2),
-                               doc='Volumetric flowrate of water into unit')
+            initialize=1,
+            units=units_meta('volume') / units_meta('time'),
+            bounds=(0, 1E2),
+            doc='Volumetric flowrate of water into unit')
         self.conc_mass_in = Var(time,
-                                self.config.property_package.component_list,
-                                initialize=1E-5,
-                                units=units_meta('mass') / units_meta('volume'),
-                                doc='Mass concentration of species at inlet')
+            self.config.property_package.component_list,
+            initialize=1E-5,
+            units=units_meta('mass') / units_meta('volume'),
+            doc='Mass concentration of species at inlet')
         self.temperature_in = Var(time,
-                                  initialize=300,
-                                  units=units_meta('temperature'),
-                                  doc='Temperature at inlet')
+            initialize=300,
+            units=units_meta('temperature'),
+            doc='Temperature at inlet')
         self.pressure_in = Var(time,
-                               initialize=1,
-                            #    domain=NonNegativeReals,
-                               units=units_meta('pressure'),
-                               doc='Pressure at inlet')
+            initialize=1,
+            units=units_meta('pressure'),
+            doc='Pressure at inlet')
 
         ## OUTLET
         self.flow_vol_out = Var(time,
-                                initialize=1,
-                                # domain=NonNegativeReals,
-                                units=units_meta('volume') / units_meta('time'),
-                                doc='Volumetric flowrate of water out of unit')
+            initialize=1,
+            units=units_meta('volume') / units_meta('time'),
+            doc='Volumetric flowrate of water out of unit')
         self.conc_mass_out = Var(time,
-                                 self.config.property_package.component_list,
-                                 initialize=0,
-                                 units=units_meta('mass') / units_meta('volume'),
-                                 doc='Mass concentration of species at outlet')
+            self.config.property_package.component_list,
+            initialize=0,
+            units=units_meta('mass') / units_meta('volume'),
+            doc='Mass concentration of species at outlet')
         self.temperature_out = Var(time,
-                                   initialize=300,
-                                   units=units_meta('temperature'),
-                                   doc='Temperature at outlet')
+            initialize=300,
+            units=units_meta('temperature'),
+            doc='Temperature at outlet')
         self.pressure_out = Var(time,
-                                initialize=1,
-                                # domain=NonNegativeReals,
-                                units=units_meta('pressure'),
-                                doc='Pressure at outlet')
+            initialize=1,
+            units=units_meta('pressure'),
+            doc='Pressure at outlet')
         self.deltaP_outlet = Var(time,
-                                 initialize=1E-6,
-                                 # domain=NonNegativeReals,
-                                 units=units_meta('pressure'),
-                                 doc='Pressure change between inlet and outlet')
+            initialize=1E-6,
+            units=units_meta('pressure'),
+            doc='Pressure change between inlet and outlet')
 
         self.deltaP_outlet.fix(0)
 
         ## WASTE
         self.flow_vol_waste = Var(time,
-                                  initialize=1,
-                                #   domain=NonNegativeReals,
-                                  units=units_meta('volume') / units_meta('time'),
-                                  doc='Volumetric flowrate of water in waste')
+            initialize=1,
+            units=units_meta('volume') / units_meta('time'),
+            doc='Volumetric flowrate of water in waste')
         self.conc_mass_waste = Var(time,
-                                   self.config.property_package.component_list,
-                                   initialize=0,
-                                   units=units_meta('mass') / units_meta('volume'),
-                                   doc='Mass concentration of species in waste')
+            self.config.property_package.component_list,
+            initialize=0,
+            units=units_meta('mass') / units_meta('volume'),
+            doc='Mass concentration of species in waste')
         self.temperature_waste = Var(time,
-                                     initialize=300,
-                                    #  domain=NonNegativeReals,
-                                     units=units_meta('temperature'),
-                                     doc='Temperature of waste')
+            initialize=300,
+            units=units_meta('temperature'),
+            doc='Temperature of waste')
         self.pressure_waste = Var(time,
-                                  initialize=1,
-                                #   domain=NonNegativeReals,
-                                  units=units_meta('pressure'),
-                                  doc='Pressure of waste')
-
+            initialize=1,
+            units=units_meta('pressure'),
+            doc='Pressure of waste')
         self.deltaP_waste = Var(time,
-                                initialize=1E-6,
-                                # domain=NonNegativeReals,
-                                units=units_meta('pressure'),
-                                doc='Pressure change between inlet and waste')
-
+            initialize=1E-6,
+            units=units_meta('pressure'),
+            doc='Pressure change between inlet and waste')
         self.deltaP_waste.fix(0)
 
         ## WATER RECOVERY & REMOVAL FRACTION
         self.water_recovery = Var(time,
-                                  initialize=0.8,
-                                #   domain=NonNegativeReals,
-                                  units=pyunits.dimensionless,
-                                #   bounds=(1E-8, 1.0000001),
-                                  doc='Water recovery fraction')
+            initialize=0.8,
+            units=pyunits.dimensionless,
+            doc='Water recovery fraction')
         self.removal_fraction = Var(time,
-                                    self.config.property_package.component_list,
-                                    # domain=NonNegativeReals,
-                                    initialize=0.01,
-                                    units=pyunits.dimensionless,
-                                    doc='Component removal fraction')
+            self.config.property_package.component_list,
+            initialize=0.01,
+            units=pyunits.dimensionless,
+            doc='Component removal fraction')
 
         @self.Constraint(time, doc='Outlet pressure equation')
         def outlet_pressure_constraint(b, t):
@@ -191,9 +179,15 @@ class WT3UnitProcessData(UnitModelBlockData):
                          self.config.property_package.component_list,
                          doc='Component mass balances')
         def component_mass_balance(b, t, j):
-            return (pyunits.convert(b.flow_vol_in[t], to_units=pyunits.m ** 3 / pyunits.hr) * pyunits.convert(b.conc_mass_in[t, j], to_units=pyunits.mg / pyunits.L) ==
-                    pyunits.convert(b.flow_vol_out[t], to_units=pyunits.m ** 3 / pyunits.hr) * pyunits.convert(b.conc_mass_out[t, j], to_units=pyunits.mg / pyunits.L) +
-                    pyunits.convert(b.flow_vol_waste[t], to_units=pyunits.m ** 3 / pyunits.hr) * pyunits.convert(b.conc_mass_waste[t, j], to_units=pyunits.mg / pyunits.L))
+            return (pyunits.convert(b.flow_vol_in[t], 
+                to_units=pyunits.m**3/pyunits.hr) * pyunits.convert(b.conc_mass_in[t, j], 
+                to_units=pyunits.mg/pyunits.L) ==
+                pyunits.convert(b.flow_vol_out[t], 
+                to_units=pyunits.m**3/pyunits.hr) * pyunits.convert(b.conc_mass_out[t, j], 
+                to_units=pyunits.mg/pyunits.L) +
+                pyunits.convert(b.flow_vol_waste[t], 
+                to_units=pyunits.m**3/pyunits.hr) * pyunits.convert(b.conc_mass_waste[t, j], 
+                to_units=pyunits.mg/pyunits.L))
             # return b.flow_vol_in[t] * b.conc_mass_in[t, j] == b.flow_vol_out[t] * b.conc_mass_out[t, j] + b.flow_vol_waste[t] * b.conc_mass_waste[t, j]
         #
         @self.Constraint(time, doc='Outlet temperature equation')

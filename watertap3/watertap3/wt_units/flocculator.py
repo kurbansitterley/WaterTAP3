@@ -1,6 +1,6 @@
-from pyomo.environ import Block, Expression, Var, Param, NonNegativeReals, units as pyunits
+from pyomo.environ import Constraint, Expression, Var, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 
 ## REFERENCE
 ## CAPITAL:
@@ -9,96 +9,131 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # 
 
 module_name = 'flocculator'
-basis_year = 2007
-tpec_or_tic = 'TPEC'
 
+class UnitProcess(WT3UnitProcessSISO):
 
-class UnitProcess(WT3UnitProcess):
-
-    def floc_setup(self, unit_params):
+    def floc_setup(self):
         '''
 
         :return:
         '''
         time = self.flowsheet().config.time
         t = time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[t], to_units=pyunits.m ** 3 / pyunits.hr)
-        self.flow_in_Mgpm = pyunits.convert(self.flow_vol_in[t], to_units=pyunits.Mgallon / pyunits.minute)
-        self.chem_dict = {}
-        self.residence_time = Var(time, initialize=10, domain=NonNegativeReals, units=pyunits.minute, bounds=(5,45), doc='Flocculator residence time [min]')
+        self.flow_in = pyunits.convert(self.flow_vol_in[t], 
+            to_units=pyunits.m**3/pyunits.hr)
+        
+        self.residence_time = Var(
+            initialize=10, 
+            units=pyunits.minute, 
+            bounds=(5,45), 
+            doc='Flocculator residence time [min]')
+        self.residence_time.fix(10)
 
-        try:
-            self.terminal_floc = unit_params['terminal_floc']
-        except:
+        self.floc_motor_eff = Var(
+            initialize=0.75,
+            bounds=(0, None),
+            units=pyunits.dimensionless,
+            doc='Flocculator mixer motor efficiency')
+        self.floc_motor_eff.fix(0.75)
+
+        self.num_mixers = Var(
+            initialize=3,
+            bounds=(0, None),
+            units=pyunits.dimensionless,
+            doc='Number flocculator mixers')
+        self.num_mixers.fix(3)
+
+        self.g = Var(
+            initialize=20,
+            bounds=(0, None),
+            units=pyunits.s**-1,
+            doc='Velocity gradient')
+        self.g.fix(20)
+
+        self.viscosity = Var(
+            initialize=1E-3,
+            bounds=(0, None),
+            units=pyunits.kilogram/(pyunits.second*pyunits.meter),
+            doc='Water viscosity [kg/m*s]')
+        self.viscosity.fix(1E-3)
+
+        self.floc_basin_vol = Var(
+            initialize=1,
+            bounds=(0, None),
+            units=pyunits.Mgallons,
+            doc='Flocculator basin volume [Mgal]')
+
+        self.floc_capital_A = Var(
+            initialize=1E6,
+            bounds=(0, None),
+            units=pyunits.dimensionless,
+            doc='Flocculator capital A parameter')
+
+        self.floc_capital_B = Var(
+            initialize=1,
+            bounds=(0, None),
+            units=pyunits.dimensionless,
+            doc='Flocculator capital B parameter')
+
+        self.floc_mixer_power = Var(
+            initialize=100,
+            bounds=(0, None),
+            units=pyunits.kW,
+            doc='Flocculator mixer power [kW]')
+
+        for k, v in self.unit_params.items():
+            if k in ['residence_time', 'floc_motor_eff', 'num_mixers']:
+                getattr(self, k).fix(v)
+        
+        if 'terminal_floc' in self.unit_params.keys():
+            self.terminal_floc = self.unit_params['terminal_floc']
+        else:
             self.terminal_floc = False
-        
-        if self.terminal_floc:
-            self.water_recovery.fix(0.9999)
-            self.removal_fraction[0, 'toc'].fix(0.40)
-        else:
-            self.water_recovery.fix(0.9999)
-        try:
-            self.vel_gradient = unit_params['vel_gradient']
+
+        if 'vel_gradient' in self.unit_params.keys():
+            self.vel_gradient = self.unit_params['vel_gradient']
             if self.vel_gradient not in [20, 50, 80]:
-                self.vel_gradient = 80
-        except (KeyError, TypeError) as e:
-            self.vel_gradient = 80
-        try:
-            self.residence_time.fix(unit_params['residence_time'])
-        except (KeyError, TypeError) as e:
-            self.residence_time.fix(10)
-
-        try:
-            self.motor_eff = unit_params['motor_eff']
-        except (KeyError, TypeError) as e:
-            self.motor_eff = 0.75
-        
-        try:
-            self.num_mixers = unit_params['num_mixers']
-        except KeyError as e:
-            self.num_mixers = 3
-
-        self.basin_volume_Mgal = self.flow_in_Mgpm * self.residence_time[t] 
-    
-    def fixed_cap(self):
-        '''
-
-        :return:
-        '''
-        if self.vel_gradient == 20:
-            self.floc_cap = (566045 * self.basin_volume_Mgal + 224745) * 1E-6 * self.tpec_tic
-        elif self.vel_gradient == 50:
-            self.floc_cap = (673894 * self.basin_volume_Mgal + 217222) * 1E-6 * self.tpec_tic
+                self.vel_gradient = 20
         else:
-            self.floc_cap = (952902 * self.basin_volume_Mgal + 177335) * 1E-6 * self.tpec_tic
+            self.vel_gradient = 20
+        
+        self.g.fix(self.vel_gradient)
 
-        return self.floc_cap
+        # if self.terminal_floc:
+        #     self.removal_fraction[0, 'toc'].fix(0.40)
 
-    def elect(self):
-        '''
+        self.floc_basin_vol_constr = Constraint(expr=self.floc_basin_vol ==
+                pyunits.convert(self.flow_in, 
+                to_units=pyunits.Mgallon/pyunits.minute) * self.residence_time)
 
-        :return:
-        '''
-        self.g = self.vel_gradient * pyunits.second ** -1
-        self.basin_volume_m3 = pyunits.convert(self.basin_volume_Mgal, to_units=pyunits.m ** 3)
-        self.viscosity = 1E-3 * (pyunits.kilogram / (pyunits.second * pyunits.meter))
-        self.power_needed = (self.g ** 2 * self.basin_volume_m3 * self.viscosity) * self.num_mixers
-        self.power_required = pyunits.convert(self.power_needed, to_units=pyunits.kilowatt) / self.motor_eff
-        self.floc_ei = self.power_required / self.flow_in
+        self.floc_mixer_power_constr = Constraint(expr=
+            self.floc_mixer_power == pyunits.convert((self.g ** 2 * 
+            pyunits.convert(self.floc_basin_vol,
+                to_units=pyunits.m**3) * self.viscosity) * self.num_mixers, 
+                to_units=pyunits.kilowatt) / self.floc_motor_eff)
 
-        return self.floc_ei
+        if self.vel_gradient == 20:
+            self.floc_capital_A.fix(908675)
+            self.floc_capital_B.fix(0.7191)
+        if self.vel_gradient == 50:
+            self.floc_capital_A.fix(1000977)
+            self.floc_capital_B.fix(0.7579)
+        if self.vel_gradient == 80:
+            self.floc_capital_A.fix(1218085)
+            self.floc_capital_B.fix(0.8266)
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
-        if not isinstance(unit_params, float):
-            self.floc_setup(unit_params)
-        else:
-            self.floc_setup({})
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                                                           doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+        basis_year = 2007
+        tpec_tic = 'TPEC'
+        self.floc_setup()
+        self.costing.fixed_cap_inv_unadjusted = Expression(expr=
+                (self.floc_capital_A * self.floc_basin_vol ** self.floc_capital_B) *
+                self.tpec_tic * 1E-6,
+                doc='Unadjusted fixed capital investment')
+        self.electricity = Expression(expr=self.floc_mixer_power / self.flow_in,
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
+

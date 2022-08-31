@@ -249,7 +249,8 @@ linked to all inlet states and the mixed state,
             
             component_sum = 0
             for p in inlet_list:
-                component_sum = getattr(b, ('flow_vol_%s' % p))[t] * getattr(b, ('conc_mass_%s' % p))[t, j] + component_sum
+                component_sum = getattr(b, ('flow_vol_%s' % p))[t] * \
+                    getattr(b, ('conc_mass_%s' % p))[t, j] + component_sum
                 
             return component_sum == b.flow_vol_out[t] * b.conc_mass_out[t, j]
         
@@ -560,25 +561,25 @@ linked to all inlet states and the mixed state,
                 setattr(self, p, Port(noruleinit=True, doc='Inlet Port')) #ARIEL  
 
                 setattr(self, ('flow_vol_%s' % p), Var(time,
-                                        initialize=1,
-                                        units=units_meta('volume')/units_meta('time'),
-                                        doc='Volumetric flowrate of water out of unit'))
+                    initialize=1,
+                    units=units_meta('volume')/units_meta('time'),
+                    doc='Volumetric flowrate of water out of unit'))
 
                 setattr(self, ('conc_mass_%s' % p), Var(time,
-                                         self.config.property_package.component_list,
-                                         initialize=0,
-                                         units=units_meta('mass')/units_meta('volume'),
-                                         doc='Mass concentration of species at outlet'))
+                    self.config.property_package.component_list,
+                    initialize=0,
+                    units=units_meta('mass')/units_meta('volume'),
+                    doc='Mass concentration of species at outlet'))
                 
                 setattr(self, ('pressure_%s' % p), Var(time,
-                                        initialize=1e5,
-                                        units=units_meta('pressure'),
-                                        doc='Pressure at outlet'))
+                    initialize=1e5,
+                    units=units_meta('pressure'),
+                    doc='Pressure at outlet'))
                 
                 setattr(self, ('temperature_%s' % p), Var(time,
-                                           initialize=300,
-                                           units=units_meta('temperature'),
-                                           doc='Temperature at outlet'))
+                    initialize=300,
+                    units=units_meta('temperature'),
+                    doc='Temperature at outlet'))
                     
                 getattr(self, p).add(getattr(self, ('temperature_%s' % p)), 'temperature')
                 getattr(self, p).add(getattr(self, ('pressure_%s' % p)), 'pressure')
@@ -591,22 +592,22 @@ linked to all inlet states and the mixed state,
             self.outlet = Port(noruleinit=True, doc='Outlet Port') #ARIEL
 
             self.flow_vol_out = Var(time,
-                                    initialize=1,
-                                    units=units_meta('volume')/units_meta('time'),
-                                    doc='Volumetric flowrate of water out of unit')
+                initialize=1,
+                units=units_meta('volume')/units_meta('time'),
+                doc='Volumetric flowrate of water out of unit')
             self.conc_mass_out = Var(time,
-                                     self.config.property_package.component_list,
-                                     initialize=0,
-                                     units=units_meta('mass')/units_meta('volume'),
-                                     doc='Mass concentration of species at outlet')
+                self.config.property_package.component_list,
+                initialize=0,
+                units=units_meta('mass')/units_meta('volume'),
+                doc='Mass concentration of species at outlet')
             self.temperature_out = Var(time,
-                                       initialize=300,
-                                       units=units_meta('temperature'),
-                                       doc='Temperature at outlet')
+                initialize=300,
+                units=units_meta('temperature'),
+                doc='Temperature at outlet')
             self.pressure_out = Var(time,
-                                    initialize=1e5,
-                                    units=units_meta('pressure'),
-                                    doc='Pressure at outlet')
+                initialize=1e5,
+                units=units_meta('pressure'),
+                doc='Pressure at outlet')
 
             self.outlet.add(self.flow_vol_out, 'flow_vol')
             self.outlet.add(self.conc_mass_out, 'conc_mass')

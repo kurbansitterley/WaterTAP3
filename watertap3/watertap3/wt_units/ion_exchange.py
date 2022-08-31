@@ -11,15 +11,10 @@ import idaes.core.util.scaling as iscale
 ## REFERENCE: ADD REFERENCE HERE
 
 module_name = 'ion_exchange'
-basis_year = 2016 # 2016 is costing year for EPA component costing data
-tpec_or_tic = 'TIC'
-
 
 class UnitProcess(WT3UnitProcess):
 
-
-
-    def fixed_cap(self, unit_params):
+    def fixed_cap(self):
         '''
         Docstrings go here.
         
@@ -100,7 +95,7 @@ class UnitProcess(WT3UnitProcess):
                                                      (self.num_columns + 1) * 1E-6)  # assumes centrifugal pump and 1 pump per column
         # self.rinse_pump_cap = (-24.257 * self.rinse_flow ** 2 + 2803.7 * self.rinse_flow + 7495.7) * (self.num_columns + 1) * 1E-6
 
-        self.flow_per_col_m3_min = pyunits.convert(self.flow_per_column, to_units=pyunits.m ** 3 / pyunits.min)
+        self.flow_per_col_m3_min = pyunits.convert(self.flow_per_column, to_units=pyunits.m**3 / pyunits.min)
 
         self.boost_pump_cap_constr = Constraint(expr=self.boost_pump_cap == (-24.257 * self.flow_per_col_m3_min ** 2 + 2803.7 * self.flow_per_col_m3_min + 7495.7) *
                                                      (self.num_columns + 1) * 1E-6)  # assumes centrifugal pump and 1 pump per column
@@ -155,16 +150,16 @@ class UnitProcess(WT3UnitProcess):
                                             # domain=NonNegativeReals,
                                             doc='Total IX electricity intensity [kWh/m3]')
 
-        flow_in_m3_hr = pyunits.convert(self.flow_vol_in[self.t], to_units=pyunits.m ** 3 / pyunits.hr)
-        flow_out_m3_hr = pyunits.convert(self.flow_vol_out[self.t], to_units=pyunits.m ** 3 / pyunits.hr)
-        flow_waste_m3_hr = pyunits.convert(self.flow_vol_waste[self.t], to_units=pyunits.m ** 3 / pyunits.hr)
-        flow_per_column_m3_s = pyunits.convert(self.flow_per_column, to_units=pyunits.m ** 3 / pyunits.second)
-        regen_flow_m3_s = pyunits.convert(self.regen_flow / self.num_columns, to_units=pyunits.m ** 3 / pyunits.second)
-        bw_flow_m3_s = pyunits.convert(self.bw_flow / self.num_columns, to_units=pyunits.m ** 3 / pyunits.second)
-        rinse_flow_m3_s = pyunits.convert(self.rinse_flow / self.num_columns, to_units=pyunits.m ** 3 / pyunits.second)
+        flow_in_m3_hr = pyunits.convert(self.flow_vol_in[self.t], to_units=pyunits.m**3/pyunits.hr)
+        flow_out_m3_hr = pyunits.convert(self.flow_vol_out[self.t], to_units=pyunits.m**3/pyunits.hr)
+        flow_waste_m3_hr = pyunits.convert(self.flow_vol_waste[self.t], to_units=pyunits.m**3/pyunits.hr)
+        flow_per_column_m3_s = pyunits.convert(self.flow_per_column, to_units=pyunits.m**3 / pyunits.second)
+        regen_flow_m3_s = pyunits.convert(self.regen_flow / self.num_columns, to_units=pyunits.m**3 / pyunits.second)
+        bw_flow_m3_s = pyunits.convert(self.bw_flow / self.num_columns, to_units=pyunits.m**3 / pyunits.second)
+        rinse_flow_m3_s = pyunits.convert(self.rinse_flow / self.num_columns, to_units=pyunits.m**3 / pyunits.second)
         self.pump_efficiency = Var(initialize=0.7, units=pyunits.dimensionless, doc='Pump Efficiency [dimensionless]')
         self.g = Param(initialize=9.81, units=pyunits.m / pyunits.second ** 2, doc='Gravity [m/s2]')
-        self.rho = Param(initialize=1000, units=pyunits.kg / pyunits.m ** 3, doc='Pure Water Density [kg/m3]')
+        self.rho = Param(initialize=1000, units=pyunits.kg/pyunits.m**3, doc='Pure Water Density [kg/m3]')
         self.pressure_drop_m = self.pressure_drop * (0.70325 * (pyunits.m / pyunits.psi)) ## 1 psi of differential pressure = 0.70325 m pump head
         self.pump_efficiency.fix(0.7)
 
@@ -190,22 +185,22 @@ class UnitProcess(WT3UnitProcess):
 
         return self.ix_electricity_intensity
 
-    def ix_setup(self, unit_params):
-        self.ix_regen(unit_params)
+    def ix_setup(self):
+        self.ix_regen()
         self.ix_backwash()
         self.ix_rinse()
-        self.ix_constituents(unit_params)
+        self.ix_constituents()
         self.ix_resin()
         self.ix_column()
         self.ix_constraints()
 
-    def ix_regen(self, unit_params):
+    def ix_regen(self):
 
         ### REGEN VARIABLES
 
         self.regen_dose = Var(initialize=300,
                             #   domain=NonNegativeReals,
-                              units=pyunits.kg / pyunits.m ** 3,
+                              units=pyunits.kg/pyunits.m**3,
                               bounds=(80, 500),
                               doc='NaCl dose required for regeneration [kg/m3]')
 
@@ -216,7 +211,7 @@ class UnitProcess(WT3UnitProcess):
 
         self.regen_density = Var(initialize=1000,
                                 #  domain=NonNegativeReals,
-                                 units=pyunits.kg / pyunits.m ** 3,
+                                 units=pyunits.kg/pyunits.m**3,
                                  bounds=(990, 1200),
                                  doc='Density of NaCl regen solution [kg/m3]')
 
@@ -227,7 +222,7 @@ class UnitProcess(WT3UnitProcess):
 
         self.regen_conc = Var(initialize=110,
                             #   domain=NonNegativeReals,
-                              units=pyunits.kg / pyunits.m ** 3,
+                              units=pyunits.kg/pyunits.m**3,
                               doc='Concentration of regen solution [kg/m3]')
 
         self.regen_vol = Var(initialize=2,
@@ -236,17 +231,17 @@ class UnitProcess(WT3UnitProcess):
 
         self.regen_soln_per_column = Var(initialize=50,
                                         #  domain=NonNegativeReals,
-                                         units=pyunits.m ** 3,
+                                         units=pyunits.m**3,
                                          doc='Regen solution used per column [m3/column]')
 
         self.regen_soln_per_column_annual = Var(initialize=1E3,
                                                 # domain=NonNegativeReals,
-                                                units=pyunits.m ** 3 / pyunits.year,
+                                                units=pyunits.m**3 / pyunits.year,
                                                 doc='Annual regen used per column [m3/year]')
 
         self.regen_soln_annual = Var(initialize=1E5,
                                     #  domain=NonNegativeReals,
-                                     units=pyunits.m ** 3 / pyunits.year,
+                                     units=pyunits.m**3 / pyunits.year,
                                      doc='Total volume regen solution used [m3/year]')
 
         self.regen_time_per_column = Var(initialize=5,
@@ -257,7 +252,7 @@ class UnitProcess(WT3UnitProcess):
         self.regen_flow = Var(initialize=10,
                             #   domain=NonNegativeReals,
                               bounds=(0.01, 1E5),
-                              units=pyunits.m ** 3 / pyunits.min,
+                              units=pyunits.m**3 / pyunits.min,
                               doc='Regeneration flow rate [m3/min]')
 
         self.num_regen_per_column_annual = Var(initialize=200,
@@ -280,7 +275,7 @@ class UnitProcess(WT3UnitProcess):
 
         self.salt_dose = Var(initialize=0.1,
                             #  domain=NonNegativeReals,
-                             units=pyunits.kg / pyunits.m ** 3,
+                             units=pyunits.kg/pyunits.m**3,
                              doc='Salt dose for system [kg/m3]')
 
         self.total_regen_time = Var(initialize=30,
@@ -290,8 +285,8 @@ class UnitProcess(WT3UnitProcess):
 
         self.regen_dose.fix(300)
 
-        if 'regen_ww' in unit_params.keys():
-            self.regen_ww.fix(unit_params['regen_ww'])
+        if 'regen_ww' in self.unit_params.keys():
+            self.regen_ww.fix(self.unit_params['regen_ww'])
         else:
             self.regen_ww.fix(0.1)
 
@@ -314,7 +309,7 @@ class UnitProcess(WT3UnitProcess):
 
             self.bw_flow = Var(initialize=5,
                             # domain=NonNegativeReals,
-                            units=pyunits.m ** 3 / pyunits.minute,
+                            units=pyunits.m**3 / pyunits.minute,
                             doc='Backwash flow rate [m3/min]')
 
             self.bed_expansion = Var(initialize=0.5,
@@ -350,7 +345,7 @@ class UnitProcess(WT3UnitProcess):
 
             self.bw_flow = Var(initialize=5,
                             # domain=NonNegativeReals,
-                            units=pyunits.m ** 3 / pyunits.minute,
+                            units=pyunits.m**3 / pyunits.minute,
                             doc='Backwash flow rate [m3/min]')
 
             self.bed_expansion = Var(initialize=0.5,
@@ -395,13 +390,13 @@ class UnitProcess(WT3UnitProcess):
         self.rinse_vol_per_column = Var(initialize=150,
                                         bounds=(1, 1E3),
                                         # domain=NonNegativeReals,
-                                        units=pyunits.m ** 3,
+                                        units=pyunits.m**3,
                                         doc='Rinse volume per column [m3/col]')
 
         self.rinse_vol_per_column_annual = Var(initialize=5E3,
                                             bounds=(1, 1E6),
                                             # domain=NonNegativeReals,
-                                            units=pyunits.m ** 3 / pyunits.year,
+                                            units=pyunits.m**3 / pyunits.year,
                                             doc='Rinse volume per column [m3/yr]')
 
         self.rinse_time_per_column = Var(initialize=4,
@@ -413,10 +408,10 @@ class UnitProcess(WT3UnitProcess):
         self.rinse_flow = Var(initialize=2,
                                 # domain=NonNegativeReals,
                                 bounds=(0.01, 1E3),
-                                units=pyunits.m ** 3 / pyunits.min,
+                                units=pyunits.m**3 / pyunits.min,
                                 doc='Rinse step flow rate [m3/min]')
 
-    def ix_constituents(self, unit_params):
+    def ix_constituents(self):
 
         self.mass_in = Var(self.config.property_package.component_list,
                            initialize=200,
@@ -452,8 +447,8 @@ class UnitProcess(WT3UnitProcess):
                                 # domain=NonNegativeReals,
                                 doc='Aqueous ion concentration [eq/L]')
 
-        if 'target_removal' in unit_params.keys():
-            self.target_removal.fix(unit_params['target_removal'])
+        if 'target_removal' in self.unit_params.keys():
+            self.target_removal.fix(self.unit_params['target_removal'])
         else:
             self.target_removal.fix(0.99)
 
@@ -502,7 +497,7 @@ class UnitProcess(WT3UnitProcess):
         
         self.resin_vol = Var(initialize=100,
                             # domain=NonNegativeReals,
-                            units=pyunits.m ** 3,
+                            units=pyunits.m**3,
                             doc='Total resin volume needed [m3]')
     
         self.resin_mass = Var(initialize=100,
@@ -529,7 +524,7 @@ class UnitProcess(WT3UnitProcess):
 
         self.resin_vol_per_col = Var(initialize=15,
                                     # domain=NonNegativeReals,
-                                    units=pyunits.m ** 3,
+                                    units=pyunits.m**3,
                                     doc='Resin per column [m3]')
 
         self.resin_loss_frac_annual = Var(initialize=0.045,
@@ -539,7 +534,7 @@ class UnitProcess(WT3UnitProcess):
 
         self.resin_loss_annual = Var(initialize=20,
                                     #  domain=NonNegativeReals,
-                                     units=pyunits.m ** 3,
+                                     units=pyunits.m**3,
                                      doc='Resin replaced per year [m3]')
         
         self.void_fraction = Var(initialize=0.37,
@@ -550,17 +545,17 @@ class UnitProcess(WT3UnitProcess):
         
         self.void_volume = Var(initialize=10,
                                 #  domain=NonNegativeReals,
-                                units=pyunits.m ** 3,
+                                units=pyunits.m**3,
                                 doc='Void volume [m3]')
                     
         self.void_vol_per_col = Var(initialize=10,
                                 #  domain=NonNegativeReals,
-                                units=pyunits.m ** 3,
+                                units=pyunits.m**3,
                                 doc='Void volume per column[m3]')
 
         self.bed_volume = Var(initialize=10,
                             #  domain=NonNegativeReals,
-                            units=pyunits.m ** 3,
+                            units=pyunits.m**3,
                             doc='Resin bed volume [m3]')
 
         # self.sfr.fix(10)
@@ -577,7 +572,7 @@ class UnitProcess(WT3UnitProcess):
             self.resin_density = Var(initialize=800,
                                     # domain=NonNegativeReals,
                                     bounds=(625, 975),
-                                    units=pyunits.kg / pyunits.m ** 3,
+                                    units=pyunits.kg/pyunits.m**3,
                                     doc='SAC Resin density [kg/m3]')
 
             self.resin_capacity.fix(1.7)
@@ -593,7 +588,7 @@ class UnitProcess(WT3UnitProcess):
             self.resin_density = Var(initialize=700,
                                     # domain=NonNegativeReals,
                                     bounds=(675, 725),
-                                    units=pyunits.kg / pyunits.m ** 3,
+                                    units=pyunits.kg/pyunits.m**3,
                                     doc='SBA Resin density [kg/m3]')
             
             self.resin_capacity.fix(1.2)
@@ -609,7 +604,7 @@ class UnitProcess(WT3UnitProcess):
             self.resin_density = Var(initialize=725,
                                     # domain=NonNegativeReals,
                                     bounds=(650, 825),
-                                    units=pyunits.kg / pyunits.m ** 3,
+                                    units=pyunits.kg/pyunits.m**3,
                                     doc='WAC Resin density [kg/m3]')
             
             self.resin_capacity.fix(3.5)
@@ -625,7 +620,7 @@ class UnitProcess(WT3UnitProcess):
             self.resin_density = Var(initialize=675,
                                     # domain=NonNegativeReals,
                                     bounds=(250, 725),
-                                    units=pyunits.kg / pyunits.m ** 3,
+                                    units=pyunits.kg/pyunits.m**3,
                                     doc='WBA Resin density [kg/m3]')
             
             self.resin_capacity.fix(1.5)
@@ -655,14 +650,14 @@ class UnitProcess(WT3UnitProcess):
             self.column_vol = Var(initialize=2,
                                 #   domain=NonNegativeReals,
                                   bounds=(0.5, 4),
-                                  units=pyunits.m ** 3,
+                                  units=pyunits.m**3,
                                   doc='Column volume [m3]')
 
         else:
             self.column_vol = Var(initialize=35,
                                 #   domain=NonNegativeReals,
                                   bounds=(0.5, 75),
-                                  units=pyunits.m ** 3,
+                                  units=pyunits.m**3,
                                   doc='Column volume [m3]')
 
         self.num_columns = Var(initialize=2,
@@ -684,7 +679,7 @@ class UnitProcess(WT3UnitProcess):
         self.flow_per_column = Var(initialize=250,
                                 #    domain=NonNegativeReals,
                                 #    bounds=(1, 1E5),
-                                   units=pyunits.m ** 3 / pyunits.hr,
+                                   units=pyunits.m**3/pyunits.hr,
                                    doc='Flow per column [m3/hr]')
 
         self.pressure_drop = Var(initialize=14,
@@ -700,9 +695,12 @@ class UnitProcess(WT3UnitProcess):
 
     def ix_constraints(self): 
 
-        flow_out_m3_hr = pyunits.convert(self.flow_vol_out[self.t], to_units=pyunits.m ** 3 / pyunits.hr)
-        flow_out_m3_yr = pyunits.convert(self.flow_vol_out[self.t], to_units=pyunits.m ** 3 / pyunits.year)
-        flow_out_L_hr = pyunits.convert(self.flow_vol_out[self.t], to_units=pyunits.L / pyunits.hr)
+        flow_out_m3_hr = pyunits.convert(self.flow_vol_out[self.t],
+            to_units=pyunits.m**3/pyunits.hr)
+        flow_out_m3_yr = pyunits.convert(self.flow_vol_out[self.t],
+            to_units=pyunits.m**3 / pyunits.year)
+        flow_out_L_hr = pyunits.convert(self.flow_vol_out[self.t],
+            to_units=pyunits.L / pyunits.hr)
 
         ############################# CONSTRAINTS START
         #### RESIN AND PERFORMANCE CONSTRAINTS
@@ -860,17 +858,18 @@ class UnitProcess(WT3UnitProcess):
                                             self.flow_vol_waste[self.t] * self.conc_mass_waste[self.t, c])
 
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
+        basis_year = 2016 # 2016 is costing year for EPA component costing data
+        tpec_tic = 'TIC'
         time = self.flowsheet().config.time
         self.t = time.first()
         self.units_meta = self.config.property_package.get_metadata().get_derived_units
 
         try:
-            self.mode = unit_params['mode']
+            self.mode = self.unit_params['mode']
             if self.mode not in ['sba', 'sac']:
                 self.mode = 'sac' # default to cation exchange
         except (KeyError, ValueError) as e:
@@ -880,7 +879,7 @@ class UnitProcess(WT3UnitProcess):
         self.source_df['mg_L'] = self.source_df['value'] * 1000
         self.parent_block().has_ix = True
         try:
-            self.pv_material = unit_params['pv_material']
+            self.pv_material = self.unit_params['pv_material']
         except KeyError:
             self.pv_material = 'carbon_w_plastic_internals'
 
@@ -892,7 +891,7 @@ class UnitProcess(WT3UnitProcess):
             self.ix_df = pd.read_csv('data/ix_sac.csv', index_col='constituent')
             self.presaturant_ion = 'sodium'
             try:
-                self.resin_type = unit_params['resin_type']
+                self.resin_type = self.unit_params['resin_type']
                 if self.resin_type not in self.resin_dict.keys():
                     self.resin_type = 'polystyrenic_macro'
             except (KeyError, ValueError) as e:
@@ -910,7 +909,7 @@ class UnitProcess(WT3UnitProcess):
             self.ix_df = pd.read_csv('data/ix_sba.csv', index_col='constituent')
             self.presaturant_ion = 'chloride'
             try:
-                self.resin_type = unit_params['resin_type']
+                self.resin_type = self.unit_params['resin_type']
                 if self.resin_type not in self.resin_dict.keys():
                     self.resin_type = 'styrenic_gel_1'
             except (KeyError, ValueError) as e:
@@ -928,14 +927,14 @@ class UnitProcess(WT3UnitProcess):
         self.cons_df = self.source_df.loc[[c for c in self.cons if c != self.presaturant_ion]].copy()
         self.cons_df['meq_L'] = [(self.cons_df.loc[c].value * 1E3) / 
                                     self.meq_conv_dict[c] for c in self.cons if c != self.presaturant_ion]
-        self.ix_setup(unit_params)
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(unit_params),
+        self.ix_setup()
+        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
                                                            doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kwh/m3]')
+                                      doc='Electricity intensity [kWh/m3]')
 
         self.costing.other_var_cost = (self.resin_unit_cap * self.resin_loss_annual) * 1E-6
-        financials.get_complete_costing(self.costing)
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
 
     def ix_print(self):
         print(f'**********IX RESULTS**********\n\n')
@@ -970,9 +969,12 @@ class UnitProcess(WT3UnitProcess):
             print(f'\t\t{c.title()}, {round(self.mass_in[c](), 2)}, {round(self.mass_removed[c](), 2)}, {round(self.frac_removed[c](), 2) * 100}%')
         print('All Constituents [mg/L]:')
         for c in self.config.property_package.component_list:
-            c_in = round(pyunits.convert(self.conc_mass_in[self.t, c], to_units=pyunits.mg / pyunits.L)(), 4)
-            c_out = round(pyunits.convert(self.conc_mass_out[self.t, c], to_units=pyunits.mg / pyunits.L)(), 4)
-            c_waste = round(pyunits.convert(self.conc_mass_waste[self.t, c], to_units=pyunits.mg / pyunits.L)(), 4)
+            c_in = round(pyunits.convert(self.conc_mass_in[self.t, c],
+                to_units=pyunits.mg/pyunits.L)(), 4)
+            c_out = round(pyunits.convert(self.conc_mass_out[self.t, c],
+                to_units=pyunits.mg/pyunits.L)(), 4)
+            c_waste = round(pyunits.convert(self.conc_mass_waste[self.t, c],
+                to_units=pyunits.mg/pyunits.L)(), 4)
             print(f'\t\t{c.title()}, In: {c_in}, Out: {c_out}, Waste: {c_waste}')
         
         print(f'\nREGEN:')

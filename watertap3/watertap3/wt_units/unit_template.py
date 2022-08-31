@@ -1,4 +1,4 @@
-from pyomo.environ import Block, Expression, units as pyunits
+from pyomo.environ import Var, Constraint, Expression, units as pyunits
 from watertap3.utils import financials
 from watertap3.wt_units.wt_unit import WT3UnitProcess
 
@@ -9,9 +9,6 @@ from watertap3.wt_units.wt_unit import WT3UnitProcess
 # citation here
 
 module_name = 'unit'
-basis_year = 2020
-tpec_or_tic = 'TPEC'
-
 
 class UnitProcess(WT3UnitProcess):
 
@@ -22,8 +19,8 @@ class UnitProcess(WT3UnitProcess):
         :return:
         '''
         time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time], to_units=pyunits.m ** 3 / pyunits.hr)
-        self.chem_dict = {}
+        self.flow_in = pyunits.convert(self.flow_vol_in[time],
+            to_units=pyunits.m**3/pyunits.hr)
         unit_cap = 0
         return unit_cap
 
@@ -36,13 +33,14 @@ class UnitProcess(WT3UnitProcess):
         electricity = 0
         return electricity
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
+        basis_year = 2020
+        tpec_tic = 'TPEC'
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                                                           doc='Unadjusted fixed capital investment')
+                doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)

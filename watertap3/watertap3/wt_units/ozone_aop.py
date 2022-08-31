@@ -1,6 +1,6 @@
-from pyomo.environ import Var, Constraint, Expression, units as pyunits
+from pyomo.environ import Var, Constraint, Expression, value, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
@@ -16,21 +16,18 @@ from scipy.optimize import curve_fit
 # energy uses."
 
 module_name = 'ozone_aop'
-basis_year = 2014
-tpec_or_tic = 'TPEC'
 
-
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessSISO):
 
     def ozone_aop_setup(self):
         time = self.flowsheet().config.time.first()
         self.flow_in = pyunits.convert(self.flow_vol_in[time], 
-                to_units=pyunits.Mgallons / pyunits.day)
+            to_units=pyunits.Mgallons/pyunits.day)
 
         self.ox_dose = Var(initialize=1,
-                units=pyunits.mg/pyunits.L,
-                bounds=(0, None),
-                doc='Oxidant dose [mg/L')
+            units=pyunits.mg/pyunits.L,
+            bounds=(0, None),
+            doc='Oxidant dose [mg/L]')
 
         if 'toc_method' in self.unit_params.keys():
             self.toc_method = self.unit_params['toc_method']
@@ -40,12 +37,13 @@ class UnitProcess(WT3UnitProcess):
             self.toc_method = 'source'
         if self.toc_method == 'source':
             try:
-                self.toc_in = (self.parent_block().source_df.loc['toc'].value * 1000) * (pyunits.mg / pyunits.liter)
+                self.toc_in = (self.parent_block().source_df.loc['toc'].value * 1000) * \
+                    (pyunits.mg/pyunits.liter)
             except KeyError:
                 print('TOC not found in source file. Assuming TOC = 5 mg/L')
-                self.toc_in = 5 * (pyunits.mg / pyunits.liter)
+                self.toc_in = 5 * (pyunits.mg/pyunits.liter)
         if self.toc_method == 'user':
-            self.toc_in = self.unit_params['toc_in'] * (pyunits.mg / pyunits.liter)
+            self.toc_in = self.unit_params['toc_in'] * (pyunits.mg/pyunits.liter)
         if self.toc_method == 'deprecated':
             self.toc_in = pyunits.convert(self.conc_mass_in[0, 'toc'],
                 to_units=pyunits.mg/pyunits.liter)
@@ -71,26 +69,24 @@ class UnitProcess(WT3UnitProcess):
 
         if self.aop:
             if 'dose' in self.unit_params.keys():
-                self.ox_dose.fix(pyunits.convert(self.unit_params['dose'],
-                                 to_units=pyunits.kg/pyunits.m**3))
-            if 'dose' not in self.unit_params.keys():
+                self.ox_dose.fix(value(pyunits.convert(self.unit_params['dose']*pyunits.mg/pyunits.L,
+                    to_units=pyunits.kg/pyunits.m**3)))
+            elif 'dose' not in self.unit_params.keys():
                 self.ox_dose_constr = Constraint(
                     expr=self.ox_dose == pyunits.convert((0.5 * self.o3_toc_ratio * self.toc_in), 
-                    to_units=(pyunits.kg / pyunits.m ** 3)))
+                    to_units=(pyunits.kg/pyunits.m**3)))
             else:
-                self.ox
+                self.ox_dose = 0
             if 'chemical_name' in self.unit_params.keys():
                 self.chem_name = self.unit_params['chemical_name']
             else:
                 self.chem_name = 'Hydrogen_Peroxide'
-            self.chem_dict = {
-                    self.chem_name: self.ox_dose
-                    }
+            self.chem_dict = {self.chem_name: self.ox_dose}
             self.h2o2_base_cap = 1228
             self.h2o2_cap_exp = 0.2277
         else:
             self.ox_dose.fix(0)
-            self.chem_dict = {}
+            
 
     def fixed_cap(self):
         '''
@@ -131,7 +127,8 @@ class UnitProcess(WT3UnitProcess):
                 costs.append(cutal_ox[i])
             self.flow_interp.append(k)
             self.cost_interp.append(np.interp(dose, doses, costs))
-        (a, b), _ = curve_fit(power, self.flow_interp, self.cost_interp, bounds=[[1E-5, 1E-5], [100000, 5]])
+        (a, b), _ = curve_fit(power, self.flow_interp, self.cost_interp, \
+            bounds=[[1E-5, 1E-5], [100000, 5]])
         return a, b
 
     def elect(self):
@@ -140,7 +137,7 @@ class UnitProcess(WT3UnitProcess):
 
         '''
 
-        if 'EEO' in self.unit_params:
+        if 'EEO' in self.unit_params.keys():
             self.EEO = Var(initialize=0.1,
                 units=(pyunits.kW*pyunits.hr)/(pyunits.m**3),
                 bounds=(0, None),
@@ -164,11 +161,11 @@ class UnitProcess(WT3UnitProcess):
                     doc='Ozone flow [lb/hr]')
             self.ozone_flow_constr = Constraint(expr=
                     self.ozone_flow == pyunits.convert(self.flow_in * self.ozone_consumption,
-                    to_units=pyunits.lb/pyunits.hr))
+                        to_units=pyunits.lb/pyunits.hr))
             self.ozone_power_constr = Constraint(expr=
                             self.ozone_power == self.ozone_power_coeff * self.ozone_flow)
             flow_in_m3hr = pyunits.convert(self.flow_in, 
-                            to_units=(pyunits.m**3/pyunits.hour))
+                                to_units=(pyunits.m**3/pyunits.hour))
             electricity = self.ozone_power / flow_in_m3hr
             return electricity
 
@@ -178,18 +175,19 @@ class UnitProcess(WT3UnitProcess):
 
         :return: Oxidant solution flow [lb/day]
         '''
-        chemical_rate = self.flow_in * self.ox_dose  # kg/hr
-        chemical_rate = pyunits.convert(chemical_rate, to_units=(pyunits.lb / pyunits.day))
+        chemical_rate = self.flow_in * self.ox_dose  
+        chemical_rate = pyunits.convert(chemical_rate,
+            to_units=(pyunits.lb/pyunits.day))
         return chemical_rate
 
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
+        basis_year = 2014
         self.ozone_aop_setup()
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                                                           doc='Unadjusted fixed capital investment')
+                doc='Unadjusted fixed capital investment')
         self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year)

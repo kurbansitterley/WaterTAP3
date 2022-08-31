@@ -1,10 +1,9 @@
 import os
 import pandas as pd
 from pylab import *
-from pyomo.environ import Block, Expression, units as pyunits, value
-from watertap3.utils import generate_constituent_list
+from pyomo.environ import Block, value
 
-__all__ = ['get_results_table', 'combine_case_study_results', 'compare_with_excel']
+__all__ = ['get_results_table', 'combine_case_study_results']
 
 up_variables = ['fixed_cap_inv', 'fixed_cap_inv_unadjusted', 'land_cost', 'working_cap',
         'total_cap_investment', 'cat_and_chem_cost', 'electricity_cost', 'other_var_cost',
@@ -12,116 +11,11 @@ up_variables = ['fixed_cap_inv', 'fixed_cap_inv_unadjusted', 'land_cost', 'worki
         'base_employee_salary_cost', 'electricity_cost', 'annual_op_main_cost']
 
 
-def get_constituent_nice_name(con_str):
-    con_dict = {
-            'alkalinity_as_caco3': 'Alkalinity (as CaCO3)',
-            'ammonia_nitrogen': 'NH4-N',
-            'beta_particles_and_photon_emitters': 'Beta and Photon Emitters',
-            'bicarbonate_alkalinity_as_caco3': 'Bicarbonate Alkalinity (as CaCO3)',
-            'bod': 'BOD',
-            'bod30': 'BOD30',
-            'chemical_oxygen_demand_cod': 'COD',
-            'cyanide_as_free': 'Free Cyanide',
-            'nitrate_as_nitrogen': 'NO3-N',
-            'nitrite_as_nitrogen': 'NO2-N',
-            'ph_max': 'pH Max',
-            'ph_min': 'pH Min',
-            'phosphates': 'PO4',
-            'radium_226': 'Radium-226',
-            'radium_226_and_radium_228_combined': 'Radium-226 + Radium-228',
-            'radium_228': 'Radium-228',
-            'sulfate': 'SO4',
-            'total_petroleum_hydrocarbons_tph': 'TPH',
-            'trace_organic_chemicals_torc': 'TrOC',
-            'total_coliforms_fecal_ecoli': 'Fecal Coliforms',
-            'tds': 'TDS',
-            'toc': 'TOC',
-            'tss': 'TSS'
-            }
-
-    unit_dict = {
-            'beta_particles_and_photon_emitters': 'pCi/L',
-            'electrical_conductivity': 'S/m',
-            'ph_max': 'pH',
-            'ph_min': 'pH',
-            'radium_226': 'pCi/L',
-            'radium_226_and_radium_228_combined': 'pCi/L',
-            'radium_228': 'pCi/L',
-            'uranium': 'pCi/L',
-            'turbidity': 'NTU'
-            }
-    if con_str in con_dict.keys():
-        constituent = con_dict[con_str]
-    else:
-        constituent = con_str.replace('_', ' ').title()
-
-    if con_str in unit_dict.keys():
-        units = unit_dict[con_str]
-    else:
-        units = 'kg/m3'
-
-    return constituent, units
 
 
-def get_unit_nice_name(unit_str):
-    up_dict = {
-            'agglom_stacking': 'Agglom. Stacking',
-            'anti_scalant_addition': 'Anti-Scalant Addition',
-            'co2_addition': 'CO2 Addition',
-            'gac': 'GAC',
-            'gac_gravity': 'GAC - Gravity',
-            'gac_gravity_2': 'GAC - Gravity 2',
-            'gac_pressure_vessel': 'GAC - Pressure Vessel',
-            'landfill_zld': 'Landfill ZLD',
-            'ozone_aop': 'Ozone/AOP',
-            'uv_aop': 'UV/AOP',
-            'sw_onshore_intake': 'Seawater Intake',
-            'abmet_intermediate_pump': 'ABMET Intermediate Pump',
-            'abmet_intermediate_pump_2': 'ABMET Intermediate Pump 2',
-            'abmet_interstage_pump': 'ABMET Interstage Pump',
-            'abmet_interstage_pump_2': 'ABMET Interstage Pump 2',
-            'bioreactor_bw_pump': 'Bioreactor BW Pump',
-            'fab25': 'Fab25',
-            'iron_and_manganese_removal': 'Fe/Mn Removal',
-            'lp_transfer_pump': 'LP Transfer Pump',
-            'lp_transfer_pump_2': 'LP Transfer Pump 2',
-            'municipal_wwtp': 'Municipal WWTP',
-            'uv_irradiation': 'UV Irradiation',
-            'ph_adjustment': 'pH Adjustment',
-            'ro_a_first_pass': 'RO-A First Pass',
-            'ro_a_second_pass': 'RO-A Second Pass',
-            'ro_a1': 'RO-A1',
-            'ro_a2': 'RO-A2',
-            'ro_b_first_pass': 'RO-B First Pass',
-            'ro_b_second_pass': 'RO-B Second Pass',
-            'ro_b1': 'RO-B1',
-            'ro_b2': 'RO-B2',
-            'ro_first_pass': 'RO First Pass',
-            'ro_second_pass': 'RO Second Pass',
-            'ro_first_stage': 'RO First Stage',
-            'ro_second_stage': 'RO Second Stage',
-            'ro_production': 'RO Production',
-            'ro_active': 'RO Active',
-            'ro_restore': 'RO Restore',
-            'ro_restore_stage': 'RO Restore Stage',
-            'ro_stage': 'RO Stage',
-            'smp': 'SMP',
-            'to_zld': 'To ZLD',
-            'swift_pump': 'SWIFT Pump',
-            'tri_media_filtration': 'Tri-Media Filtration',
-            'ultra_filtration': 'Ultrafiltration',
-            'ultra_filtration_2': 'Ultrafiltration 2',
-            'uf_feed_pump': 'UF Feed Pump',
-            'waiv': 'WAIV'
-            }
-    if unit_str in up_dict.keys():
-        unit = up_dict[unit_str]
-        return unit
-    else:
-        return unit_str.replace('_', ' ').title()
+def get_results_table(m=None, scenario=None, case_study=None, 
+                    save=True, incl_constituent_results=True):
 
-
-def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_constituent_results=True):
     if scenario is None:
         scenario = m.fs.train['scenario']
     if case_study is None:
@@ -516,6 +410,8 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
     unit_kinds.append('System')
 
     for unit in m.fs.component_objects(Block, descend_into=False):
+        # if unit.unit_type == 'passthrough':
+        #     continue
         unit_str = unit_name = str(unit)[3:]
         up_nice_name = get_unit_nice_name(unit_str)
 
@@ -529,15 +425,15 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
             category.append('Electricity')
             unit_kinds.append(unit.unit_kind)
 
-        if hasattr(unit, 'elec_int_treated'):
-            python_var.append(unit_str)
-            up_nice_name_list.append(up_nice_name)
-            python_param.append('elec_int_treated')
-            variable_list.append('Electricity Intensity System Treated')
-            value_list.append(value(unit.elec_int_treated))
-            unit_list.append('kWh/m3')
-            category.append('Electricity')
-            unit_kinds.append(unit.unit_kind)
+        # if hasattr(unit, 'elec_int_treated'):
+        #     python_var.append(unit_str)
+        #     up_nice_name_list.append(up_nice_name)
+        #     python_param.append('elec_int_treated')
+        #     variable_list.append('Electricity Intensity System Treated')
+        #     value_list.append(value(unit.elec_int_treated))
+        #     unit_list.append('kWh/m3')
+        #     category.append('Electricity')
+        #     unit_kinds.append(unit.unit_kind)
 
         if hasattr(unit, 'costing'):
             b = unit.costing
@@ -655,15 +551,16 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
             unit_list.append('m3/s')
             python_param.append('flow_vol_out')
             unit_kinds.append(unit.unit_kind)
-
-            value_list.append(value(unit.flow_vol_waste[0]))
-            python_var.append(unit_str)
-            up_nice_name_list.append(up_nice_name)
-            variable_list.append('Waste Water Flow')
-            category.append('Water Flow')
-            unit_list.append('m3/s')
-            python_param.append('flow_vol_waste')
-            unit_kinds.append(unit.unit_kind)
+            
+            if hasattr(unit, 'flow_vol_waste'):
+                value_list.append(value(unit.flow_vol_waste[0]))
+                python_var.append(unit_str)
+                up_nice_name_list.append(up_nice_name)
+                variable_list.append('Waste Water Flow')
+                category.append('Water Flow')
+                unit_list.append('m3/s')
+                python_param.append('flow_vol_waste')
+                unit_kinds.append(unit.unit_kind)
 
             value_list.append(value(unit.flow_vol_out[0]) / value(unit.flow_vol_in[0]))
             python_var.append(unit_str)
@@ -762,7 +659,7 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
 
             if incl_constituent_results:
 
-                for conc in generate_constituent_list.run(m.fs):
+                for conc in m.fs.source_constituents:
                     constituent, units = get_constituent_nice_name(conc)
 
                     ### MASS IN KG PER M3
@@ -784,14 +681,15 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
                     unit_list.append(units)
                     unit_kinds.append(unit.unit_kind)
 
-                    value_list.append(value(unit.conc_mass_waste[0, conc]))
-                    python_var.append(unit_str)
-                    up_nice_name_list.append(up_nice_name)
-                    category.append('Waste Concentration')
-                    variable_list.append(constituent)
-                    python_param.append(conc)
-                    unit_list.append(units)
-                    unit_kinds.append(unit.unit_kind)
+                    if hasattr(unit, 'conc_mass_waste'):
+                        value_list.append(value(unit.conc_mass_waste[0, conc]))
+                        python_var.append(unit_str)
+                        up_nice_name_list.append(up_nice_name)
+                        category.append('Waste Concentration')
+                        variable_list.append(constituent)
+                        python_param.append(conc)
+                        unit_list.append(units)
+                        unit_kinds.append(unit.unit_kind)
 
                     ### MASS IN KG --> MULTIPLIED BY FLOW
                     value_list.append(value(unit.conc_mass_in[0, conc]) * value(unit.flow_vol_in[0]))
@@ -812,14 +710,15 @@ def get_results_table(m=None, scenario=None, case_study=None, save=True, incl_co
                     unit_list.append('kg/s')
                     unit_kinds.append(unit.unit_kind)
 
-                    value_list.append(value(unit.conc_mass_waste[0, conc]) * value(unit.flow_vol_waste[0]))
-                    python_var.append(unit_str)
-                    up_nice_name_list.append(up_nice_name)
-                    category.append('Waste Mass Flow')
-                    variable_list.append(constituent)
-                    python_param.append(conc)
-                    unit_list.append('kg/s')
-                    unit_kinds.append(unit.unit_kind)
+                    if hasattr(unit, 'conc_mass_waste'):
+                        value_list.append(value(unit.conc_mass_waste[0, conc]) * value(unit.flow_vol_waste[0]))
+                        python_var.append(unit_str)
+                        up_nice_name_list.append(up_nice_name)
+                        category.append('Waste Mass Flow')
+                        variable_list.append(constituent)
+                        python_param.append(conc)
+                        unit_list.append('kg/s')
+                        unit_kinds.append(unit.unit_kind)
 
 ## FOR CALCULATING SYSTEM RO PARAMETERS
 
@@ -949,22 +848,131 @@ def combine_case_study_results(case_study=None, save=True):
     return final_df
 
 
-def compare_with_excel(excel_path, python_path):
-    excel = pd.read_excel(excel_path)
-    excel['Source'] = 'excel'
+# def compare_with_excel(excel_path, python_path):
+#     excel = pd.read_excel(excel_path)
+#     excel['Source'] = 'excel'
 
-    py = pd.read_csv(python_path)
-    py.rename(columns={
-            'Unit Process Name': 'Unit_Process',
-            'Case Study': 'Case_Study'
-            }, inplace=True)
-    py['Source'] = 'python'
+#     py = pd.read_csv(python_path)
+#     py.rename(columns={
+#             'Unit Process Name': 'Unit_Process',
+#             'Case Study': 'Case_Study'
+#             }, inplace=True)
+#     py['Source'] = 'python'
 
-    both = pd.concat([excel, py])
-    pivot = pd.pivot_table(both, values='Value',
-                           index=['Case_Study', 'Scenario', 'Unit_Process', 'Variable', 'Unit'],
-                           columns=['Source']).reset_index()
+#     both = pd.concat([excel, py])
+#     pivot = pd.pivot_table(both, values='Value',
+#                            index=['Case_Study', 'Scenario', 'Unit_Process', 'Variable', 'Unit'],
+#                            columns=['Source']).reset_index()
 
-    pivot.to_csv('results/check_with_excel.csv', index=False)
+#     pivot.to_csv('results/check_with_excel.csv', index=False)
 
-    return pivot
+#     return pivot
+
+
+def get_constituent_nice_name(con_str):
+    con_dict = {
+            'alkalinity_as_caco3': 'Alkalinity (as CaCO3)',
+            'ammonia_nitrogen': 'NH4-N',
+            'beta_particles_and_photon_emitters': 'Beta and Photon Emitters',
+            'bicarbonate_alkalinity_as_caco3': 'Bicarbonate Alkalinity (as CaCO3)',
+            'bod': 'BOD',
+            'bod30': 'BOD30',
+            'chemical_oxygen_demand_cod': 'COD',
+            'cyanide_as_free': 'Free Cyanide',
+            'nitrate_as_nitrogen': 'NO3-N',
+            'nitrite_as_nitrogen': 'NO2-N',
+            'ph_max': 'pH Max',
+            'ph_min': 'pH Min',
+            'phosphates': 'PO4',
+            'radium_226': 'Radium-226',
+            'radium_226_and_radium_228_combined': 'Radium-226 + Radium-228',
+            'radium_228': 'Radium-228',
+            'sulfate': 'SO4',
+            'total_petroleum_hydrocarbons_tph': 'TPH',
+            'trace_organic_chemicals_torc': 'TrOC',
+            'total_coliforms_fecal_ecoli': 'Fecal Coliforms',
+            'tds': 'TDS',
+            'toc': 'TOC',
+            'tss': 'TSS'
+            }
+
+    unit_dict = {
+            'beta_particles_and_photon_emitters': 'pCi/L',
+            'electrical_conductivity': 'S/m',
+            'ph_max': 'pH',
+            'ph_min': 'pH',
+            'radium_226': 'pCi/L',
+            'radium_226_and_radium_228_combined': 'pCi/L',
+            'radium_228': 'pCi/L',
+            'uranium': 'pCi/L',
+            'turbidity': 'NTU'
+            }
+    if con_str in con_dict.keys():
+        constituent = con_dict[con_str]
+    else:
+        constituent = con_str.replace('_', ' ').title()
+
+    if con_str in unit_dict.keys():
+        units = unit_dict[con_str]
+    else:
+        units = 'kg/m3'
+
+    return constituent, units
+
+
+def get_unit_nice_name(unit_str):
+    up_dict = {
+            'agglom_stacking': 'Agglom. Stacking',
+            'anti_scalant_addition': 'Anti-Scalant Addition',
+            'co2_addition': 'CO2 Addition',
+            'gac': 'GAC',
+            'gac_gravity': 'GAC - Gravity',
+            'gac_gravity_2': 'GAC - Gravity 2',
+            'gac_pressure_vessel': 'GAC - Pressure Vessel',
+            'landfill_zld': 'Landfill ZLD',
+            'ozone_aop': 'Ozone/AOP',
+            'uv_aop': 'UV/AOP',
+            'sw_onshore_intake': 'Seawater Intake',
+            'abmet_intermediate_pump': 'ABMET Intermediate Pump',
+            'abmet_intermediate_pump_2': 'ABMET Intermediate Pump 2',
+            'abmet_interstage_pump': 'ABMET Interstage Pump',
+            'abmet_interstage_pump_2': 'ABMET Interstage Pump 2',
+            'bioreactor_bw_pump': 'Bioreactor BW Pump',
+            'fab25': 'Fab25',
+            'iron_and_manganese_removal': 'Fe/Mn Removal',
+            'lp_transfer_pump': 'LP Transfer Pump',
+            'lp_transfer_pump_2': 'LP Transfer Pump 2',
+            'municipal_wwtp': 'Municipal WWTP',
+            'uv_irradiation': 'UV Irradiation',
+            'ph_adjustment': 'pH Adjustment',
+            'ro_a_first_pass': 'RO-A First Pass',
+            'ro_a_second_pass': 'RO-A Second Pass',
+            'ro_a1': 'RO-A1',
+            'ro_a2': 'RO-A2',
+            'ro_b_first_pass': 'RO-B First Pass',
+            'ro_b_second_pass': 'RO-B Second Pass',
+            'ro_b1': 'RO-B1',
+            'ro_b2': 'RO-B2',
+            'ro_first_pass': 'RO First Pass',
+            'ro_second_pass': 'RO Second Pass',
+            'ro_first_stage': 'RO First Stage',
+            'ro_second_stage': 'RO Second Stage',
+            'ro_production': 'RO Production',
+            'ro_active': 'RO Active',
+            'ro_restore': 'RO Restore',
+            'ro_restore_stage': 'RO Restore Stage',
+            'ro_stage': 'RO Stage',
+            'smp': 'SMP',
+            'to_zld': 'To ZLD',
+            'swift_pump': 'SWIFT Pump',
+            'tri_media_filtration': 'Tri-Media Filtration',
+            'ultra_filtration': 'Ultrafiltration',
+            'ultra_filtration_2': 'Ultrafiltration 2',
+            'uf_feed_pump': 'UF Feed Pump',
+            'waiv': 'WAIV'
+            }
+    if unit_str in up_dict.keys():
+        unit = up_dict[unit_str]
+        return unit
+    else:
+        return unit_str.replace('_', ' ').title()

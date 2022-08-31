@@ -74,46 +74,47 @@ class SourceData(UnitModelBlockData):
         self.inlet = Port(noruleinit=True, doc='Inlet Port')
 
         self.flow_vol_in = Var(time,
-                               initialize=1,
-                               domain=NonNegativeReals,
-                               units=units_meta('volume') / units_meta('time'),
-                               doc='Volumetric flowrate of water into unit')
+            initialize=1,
+            domain=NonNegativeReals,
+            units=units_meta('volume') / units_meta('time'),
+            doc='Volumetric flowrate of water into unit')
         self.conc_mass_in = Var(time,
-                                self.config.property_package.component_list,
-                                domain=NonNegativeReals,
-                                initialize=1e-5,
-                                units=units_meta('mass') / units_meta('volume'),
-                                doc='Mass concentration of species at inlet')
+            self.config.property_package.component_list,
+            domain=NonNegativeReals,
+            initialize=1e-5,
+            units=units_meta('mass') / units_meta('volume'),
+            doc='Mass concentration of species at inlet')
         self.temperature_in = Var(time,
-                                  initialize=300,
-                                  units=units_meta('temperature'),
-                                  doc='Temperature at inlet')
+            initialize=300,
+            units=units_meta('temperature'),
+            doc='Temperature at inlet')
         self.pressure_in = Var(time,
-                               initialize=1e5,
-                               units=units_meta('pressure'),
-                               doc='Pressure at inlet')
+            initialize=1e5,
+            units=units_meta('pressure'),
+            doc='Pressure at inlet')
 
-        self.outlet = Port(noruleinit=True, doc='outlet Port')
+        self.outlet = Port(noruleinit=True, 
+            doc='outlet Port')
 
         self.flow_vol_out = Var(time,
-                                initialize=1,
-                                domain=NonNegativeReals,
-                                units=units_meta('volume') / units_meta('time'),
-                                doc='Volumetric flowrate of water out of unit')
+            initialize=1,
+            domain=NonNegativeReals,
+            units=units_meta('volume') / units_meta('time'),
+            doc='Volumetric flowrate of water out of unit')
         self.conc_mass_out = Var(time,
-                                 self.config.property_package.component_list,
-                                 initialize=0,
-                                 domain=NonNegativeReals,
-                                 units=units_meta('mass') / units_meta('volume'),
-                                 doc='Mass concentration of species at outlet')
+            self.config.property_package.component_list,
+            initialize=0,
+            domain=NonNegativeReals,
+            units=units_meta('mass') / units_meta('volume'),
+            doc='Mass concentration of species at outlet')
         self.temperature_out = Var(time,
-                                   initialize=300,
-                                   units=units_meta('temperature'),
-                                   doc='Temperature at outlet')
+            initialize=300,
+            units=units_meta('temperature'),
+            doc='Temperature at outlet')
         self.pressure_out = Var(time,
-                                initialize=1e5,
-                                units=units_meta('pressure'),
-                                doc='Pressure at outlet')
+            initialize=1e5,
+            units=units_meta('pressure'),
+            doc='Pressure at outlet')
 
         self.inlet.add(self.flow_vol_in, 'flow_vol')
         self.inlet.add(self.conc_mass_in, 'conc_mass')
@@ -134,8 +135,11 @@ class SourceData(UnitModelBlockData):
             setattr(self, ('%s_eq' % j), Constraint(expr=self.conc_mass_in[t, j]
                                                          == self.conc_mass_out[t, j]))
 
-        self.eq_flow = Constraint(expr=self.flow_vol_in[t] == self.flow_vol_out[t])
+        self.eq_flow = Constraint(expr=
+            self.flow_vol_in[t] == self.flow_vol_out[t])
 
-        self.eq_temp = Constraint(expr=self.temperature_in[t] == self.temperature_out[t])
+        self.eq_temp = Constraint(expr=
+            self.temperature_in[t] == self.temperature_out[t])
 
-        self.eq_pres = Constraint(expr=self.pressure_in[t] == self.pressure_out[t])
+        self.eq_pres = Constraint(expr=
+            self.pressure_in[t] == self.pressure_out[t])

@@ -15,6 +15,10 @@ anion_exchange_epa,default,baseline,kg/m3,0.9,tds,fractional_constituent_removal
 backwash_solids_handling,default,baseline,kg/m3,0.95,nitrate,fractional_constituent_removal,nawi,default,Nitrate (measured as Nitrogen)
 backwash_solids_handling,default,baseline,kg/m3,0.95,toc,fractional_constituent_removal,nawi,default,Total Organic Carbon (TOC)
 backwash_solids_handling,default,baseline,kg/m3,0.95,tss,fractional_constituent_removal,nawi,default,Total Suspended Solids (TSS))
+grit_chambers,default,baseline,kg/m3,0.03,tss,fractional_constituent_removal,nawi,Poseidon,Total Suspended Solids (TSS)
+grit_chambers,default,baseline,kg/m3,0.03,turbidity,fractional_constituent_removal,nawi,Poseidon,Turbidity
+band_screen,default,baseline,kg/m3,0.3,tss,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Total Suspended Solids (TSS)
+band_screen,default,baseline,kg/m3,0.3,turbidity,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Turbidity
 bio_active_filtration,default,baseline,kg/m3,0.2,nonvolatile_toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Nonvolatile TOC
 bio_active_filtration,default,baseline,kg/m3,0.5,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
 bio_active_filtration,default,baseline,%,85,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
@@ -97,7 +101,7 @@ cas_nitrif,default,baseline,kg/m3,0.998798,total_coliforms_fecal_ecoli,fractiona
 cas_nitrif,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
 chlorination,default,baseline,kg/m3,0.999148,total_coliforms_fecal_ecoli,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Coliforms (including fecal coliform and� E. Coli)
 chlorination,default,baseline,kg/m3,0.999664,viruses_enteric,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Viruses (enteric)
-clarifier,default,baseline,kg/m3,0.990826,tss,fractional_constituent_removal,nawi,"Based on ""Sedimentation"" cost model. See references in VAR. There will be minimal water losses.",Total Suspended Solids (TSS)
+clarifier,default,baseline,kg/m3,0.990826,tss,fractional_constituent_removal,nawi,"Based on ""Sedimentation"" cost model. ",Total Suspended Solids (TSS)
 coag_and_floc,default,baseline,kg/m3,0.95,tss,fractional_constituent_removal,nawi,"(1) https://www.mrwa.com/WaterWorksMnl/Chapter%2012%20Coagulation.pdf, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura), (3) https://www.iwapublishing.com/news/coagulation-and-flocculation-water-and-wastewater-treatment, (4) Water and Wastewater Engineering: Design Principles and Practice (Mackenzie L. Davis).",Total Suspended Solids (TSS)
 crystallizer,default,baseline,kg/m3,0.98,alkalinity_as_caco3,fractional_constituent_removal,nawi,default,
 crystallizer,default,baseline,kg/m3,0.98,aluminum,fractional_constituent_removal,nawi,default,
@@ -137,9 +141,31 @@ crystallizer,default,baseline,kg/m3,0.98,tss,fractional_constituent_removal,nawi
 crystallizer,default,baseline,kg/m3,0.98,turbidity,fractional_constituent_removal,nawi,default,
 crystallizer,default,baseline,kg/m3,0.98,zinc,fractional_constituent_removal,nawi,default,
 crystallizer,upw,baseline,kg/m3,0.9,tds,fractional_constituent_removal,nawi,default,
+default,default,baseline,kg/m3,0.1,copper,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,ammonium,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,benzene,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,carbon_tetrachloride,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,chloroform,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,"cis-1,2-dichloroethylene",fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,dibromochloromethane,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,"1,2-dichlorobenzene",fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,"1,3-dichlorobenzene",fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,"1,2-dichloropropane",fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,ethylbenzene,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,methyl_ethyl_ketone,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,mtbe,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,m-xylene,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,n-hexane,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,o-xylene,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,"1,1,2,2-tetrachloroethane",fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,tetrachloroethylene,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,toluene,fractional_constituent_removal,nawi,,
+default,default,baseline,kg/m3,0.1,trichloroethylene,fractional_constituent_removal,nawi,,
 dissolved_air_flotation,default,baseline,kg/m3,0.95,bod,fractional_constituent_removal,nawi,Beef Processing case study.,Biological Oxygen Demand (BOD)
 dissolved_air_flotation,default,baseline,kg/m3,0.95,oil_and_grease,fractional_constituent_removal,nawi,Beef Processing case study.,Oil and Grease
 dissolved_air_flotation,default,baseline,kg/m3,0.95,tss,fractional_constituent_removal,nawi,Beef Processing case study.,Total Suspended Solids (TSS)
+drum_screen,default,baseline,kg/m3,0.3,tss,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Total Suspended Solids (TSS)
+drum_screen,default,baseline,kg/m3,0.3,turbidity,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Turbidity
 dual_media_filtration,default,baseline,kg/m3,0.2,nonvolatile_toc,fractional_constituent_removal,nawi,Monterey case study.,Nonvolatile TOC
 dual_media_filtration,default,baseline,kg/m3,0.2,toc,fractional_constituent_removal,nawi,Monterey case study.,Total Organic Carbon (TOC)
 dual_media_filtration,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Monterey case study.,Total Suspended Solids (TSS)
@@ -198,44 +224,45 @@ evaporation_pond,default,baseline,kg/m3,0.98,trihalomethanes,fractional_constitu
 evaporation_pond,default,baseline,kg/m3,0.98,tss,fractional_constituent_removal,nawi,default,
 evaporation_pond,default,baseline,kg/m3,0.98,turbidity,fractional_constituent_removal,nawi,default,
 evaporation_pond,default,baseline,kg/m3,0.98,zinc,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,alkalinity_as_caco3,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,aluminum,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,arsenic,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,barium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,bicarbonate_alkalinity_as_caco3,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,boron,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,bromide,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,calcium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,chloride,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,chromium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,cyanide_as_free,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,S/m,0.5,electrical_conductivity,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,fluoride,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,hardness,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,iron,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,lead,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,magnesium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,manganese,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,mercury,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,nickel,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,nitrate,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,nitrate_as_nitrogen,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,nitrite_as_nitrogen,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,phosphates,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,potassium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,selenium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,silicon,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,silver,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,sodium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,strontium,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,sulfate,fractional_constituent_removal,nawi,default,
-filter_press,default,baseline,kg/m3,0.5,tds,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,alkalinity_as_caco3,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,aluminum,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,arsenic,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,barium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,bicarbonate_alkalinity_as_caco3,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,boron,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,bromide,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,calcium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,chloride,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,chromium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,cyanide_as_free,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,fluoride,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,hardness,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,iron,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,lead,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,magnesium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,manganese,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,mercury,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,nickel,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,nitrate,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,nitrate_as_nitrogen,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,nitrite_as_nitrogen,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,phosphates,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,potassium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,selenium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,silicon,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,silver,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,sodium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,strontium,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,sulfate,fractional_constituent_removal,nawi,default,
+filter_press,default,baseline,kg/m3,0.98,tds,fractional_constituent_removal,nawi,default,
 filter_press,default,baseline,kg/m3,0.98,tss,fractional_constituent_removal,nawi,default,
 filter_press,default,baseline,kg/m3,0.98,turbidity,fractional_constituent_removal,nawi,default,
 filter_press,default,baseline,kg/m3,0.5,zinc,fractional_constituent_removal,nawi,default,
 gac_pressure_vessel,default,baseline,kg/m3,0.2,nonvolatile_toc,fractional_constituent_removal,nawi,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models,Nonvolatile TOC
 gac_pressure_vessel,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models,Total Suspended Solids (TSS)
 gac_pressure_vessel,default,baseline,%,85,ultraviolet_transmittance_uvt,absolute_value,nawi,EPA model: https://www.epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models,Ultraviolet Transmittance (UVT)
+gravity_thickener,default,baseline,kg/m3,0.98,tss,fractional_constituent_removal,nawi,default,
+gravity_thickener,default,baseline,kg/m3,0.98,turbidity,fractional_constituent_removal,nawi,default,
 iron_and_manganese_removal,default,baseline,kg/m3,0.9,iron,fractional_constituent_removal,nawi,"(1) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura), (3) https://www.lenntech.com/schema-of-an-iron-removal-system.htm, (4) https://www.osti.gov/servlets/purl/797810/",Iron
 iron_and_manganese_removal,default,baseline,kg/m3,0.9,manganese,fractional_constituent_removal,nawi,"(1) https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470260036.ch5, (2) Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura), (3) https://www.lenntech.com/schema-of-an-iron-removal-system.htm, (4) https://www.osti.gov/servlets/purl/797810/",Manganese
 mbr_nitrification,default,baseline,kg/m3,0.5,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
@@ -249,11 +276,20 @@ mbr_nitrification,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_v
 media_filtration,default,baseline,kg/m3,0.2,nonvolatile_toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Nonvolatile TOC
 media_filtration,default,baseline,kg/m3,0.5,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
 media_filtration,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
+micro_screen,default,baseline,kg/m3,0.3,bod,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Biological Oxygen Demand (BOD)
+micro_screen,default,baseline,kg/m3,0.6,tss,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Total Suspended Solids (TSS)
+micro_screen,default,baseline,kg/m3,0.6,turbidity,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Total Suspended Solids (TSS)
+microfiltration,default,baseline,kg/m3,0.01,tds,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
 microfiltration,default,baseline,kg/m3,0.1,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
 microfiltration,default,baseline,kg/m3,0.3,eeq,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Estradiol Equivalency (EEQ)
 microfiltration,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
 microfiltration,default,baseline,kg/m3,0.999,cryptosporidium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Cryptosporidium
 microfiltration,default,baseline,%,75,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
+microfiltration,default,baseline,kg/m3,0.9,turbidity,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",
+microfiltration,default,baseline,kg/m3,0.9,bod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",
+microfiltration,default,baseline,kg/m3,0.7,cod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",
+microfiltration,default,baseline,kg/m3,0.93,total_coliforms_fecal_ecoli,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",
+microfiltration,default,baseline,kg/m3,0.9,viruses_enteric,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",
 nano_filtration,default,baseline,kg/m3,0.05,ndma,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,N-nitrosodimethylamine (NDMA)
 nano_filtration,default,baseline,kg/m3,0.75,eeq,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Estradiol Equivalency (EEQ)
 nano_filtration,default,baseline,kg/m3,0.75,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
@@ -274,6 +310,32 @@ nano_filtration,default,baseline,kg/m3,0.99,magnesium,fractional_constituent_rem
 nano_filtration,default,baseline,kg/m3,0.99,phosphates,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,"Phosphates, Dissolved"
 nano_filtration,default,baseline,kg/m3,0.99,potassium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Potassium
 nano_filtration,default,baseline,%,90,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
+nanofiltration,default,baseline,kg/m3,0.05,ndma,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,N-nitrosodimethylamine (NDMA)
+nanofiltration,default,baseline,kg/m3,0.75,eeq,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Estradiol Equivalency (EEQ)
+nanofiltration,default,baseline,kg/m3,0.75,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
+nanofiltration,default,baseline,kg/m3,0.8,endothall,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Endothall
+nanofiltration,default,baseline,kg/m3,0.8,endrin,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Endrin
+nanofiltration,default,baseline,kg/m3,0.8,iron,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Iron
+nanofiltration,default,baseline,kg/m3,0.8,manganese,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Manganese
+nanofiltration,default,baseline,kg/m3,0.9,perfluorooctane_sulfonate_pfos,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Perfluorooctane sulfonate (PFOS)
+nanofiltration,default,baseline,kg/m3,0.9,perfluorootanoate_pfoa,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Perfluorootanoate (PFOA)
+nanofiltration,default,baseline,kg/m3,0.93,nonvolatile_toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Nonvolatile TOC
+nanofiltration,default,baseline,kg/m3,0.97,hardness,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Hardness
+nanofiltration,default,baseline,kg/m3,0.97,hydroxide_alkalinity_as_caco3,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Hydroxide Alkalinity as CaCO3
+nanofiltration,default,baseline,kg/m3,0.97,sodium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,"Sodium, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.97,sulfate,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,"Sulfate, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.97,sulfur,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Sulfur
+nanofiltration,default,baseline,kg/m3,0.9995,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
+nanofiltration,default,baseline,kg/m3,0.99,magnesium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,"Magnesium, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.99,phosphates,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,"Phosphates, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.99,potassium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Potassium
+nanofiltration,default,baseline,kg/m3,0.5,turbidity,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Sulfur
+nanofiltration,default,baseline,kg/m3,0.9,bod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Total Suspended Solids (TSS)
+nanofiltration,default,baseline,kg/m3,0.9,cod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).","Magnesium, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.9999,total_coliforms_fecal_ecoli,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).","Phosphates, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.6,tds,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Potassium
+nanofiltration,default,baseline,kg/m3,0.5,nitrate,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).","Phosphates, Dissolved"
+nanofiltration,default,baseline,kg/m3,0.9999,viruses_enteric,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Potassium
 ozone_aop,default,baseline,kg/m3,0.294787,cryptosporidium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Cryptosporidium
 ozone_aop,default,baseline,kg/m3,0.728305,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
 ozone_aop,default,baseline,kg/m3,0.903239,giardia_lamblia,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Giardia lamblia
@@ -523,6 +585,16 @@ ultra_filtration,default,baseline,kg/m3,0.3,toc,fractional_constituent_removal,n
 ultra_filtration,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
 ultra_filtration,default,baseline,kg/m3,0.9999,cryptosporidium,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Cryptosporidium
 ultra_filtration,default,baseline,%,75,ultraviolet_transmittance_uvt,absolute_value,nawi,Texas Water Development Board IT3PR User Manual,Ultraviolet Transmittance (UVT)
+ultrafiltration,default,baseline,kg/m3,0.01,tds,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
+ultrafiltration,default,baseline,kg/m3,0.3,eeq,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Estradiol Equivalency (EEQ)
+ultrafiltration,default,baseline,kg/m3,0.3,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
+ultrafiltration,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Suspended Solids (TSS)
+ultrafiltration,default,baseline,kg/m3,0.9999,cryptosporidium,0,nawi,Texas Water Development Board IT3PR User Manual,Cryptosporidium
+ultrafiltration,default,baseline,kg/m3,0.3,turbidity,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Estradiol Equivalency (EEQ)
+ultrafiltration,default,baseline,kg/m3,0.3,bod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Total Organic Carbon (TOC)
+ultrafiltration,default,baseline,kg/m3,0.97,cod,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Total Suspended Solids (TSS)
+ultrafiltration,default,baseline,kg/m3,0.9999,total_coliforms_fecal_ecoli,fractional_constituent_removal,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Cryptosporidium
+ultrafiltration,default,baseline,kg/m4,0.9999,viruses_enteric,absolute_value,nawi,"Joksimovic, D. (2006). Decision Support System for Planning of integrated Water Reuse Projects. (PhD Thesis).",Ultraviolet Transmittance (UVT)
 uv_aop,default,baseline,kg/m3,0.130955,eeq,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Estradiol Equivalency (EEQ)
 uv_aop,default,baseline,kg/m3,0.174607,toc,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Total Organic Carbon (TOC)
 uv_aop,default,baseline,kg/m3,0.965403,viruses_enteric,fractional_constituent_removal,nawi,Texas Water Development Board IT3PR User Manual,Viruses (enteric)
@@ -538,5 +610,5 @@ uv_irradiation,default,baseline,kg/m3,0.999994,total_coliforms_fecal_ecoli,fract
 walnut_shell_filter,default,baseline,kg/m3,0.2,nonvolatile_toc,fractional_constituent_removal,nawi,Kern County case study.,Nonvolatile TOC
 walnut_shell_filter,default,baseline,kg/m3,0.97,tss,fractional_constituent_removal,nawi,Kern County case study.,Total Suspended Solids (TSS)
 walnut_shell_filter,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_value,nawi,Kern County case study.,Ultraviolet Transmittance (UVT)
-default,default,baseline,kg/m3,0.1,copper,fractional_constituent_removal,nawi,,
-default,default,baseline,kg/m3,0.1,ammonium,fractional_constituent_removal,nawi,,
+wire_screen,default,baseline,kg/m3,0.3,tss,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Total Suspended Solids (TSS)
+wire_screen,default,baseline,kg/m3,0.3,turbidity,fractional_constituent_removal,nawi,"Based on ""Microscreen Filtration"" and modified for Beef Processing case study.",Total Suspended Solids (TSS)

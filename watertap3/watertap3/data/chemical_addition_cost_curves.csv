@@ -33,7 +33,7 @@ Phosphoric_Acid,900.97,0.6179,1,1000
 Potassium_Chloride,900.97,0.6179,1,1000
 Precipitation_Inhibitor,900.97,0.6179,1,1000
 Rosin_Amine_Salts,900.97,0.6179,1,1000
-Soda Ash (NaCO3),900.97,0.6179,1,1000
+Soda_Ash_(NaCO3),900.97,0.6179,1,1000
 Sodium Hypochlorite (NaOCl) (15%),900.97,0.6179,1,1000
 Sodium_Bisullfite_NaHSO3,900.97,0.6179,1,1000
 Sodium_Chloride,900.97,0.6179,1,1000
@@ -41,3 +41,5 @@ Sodium_Hexametaphosphate,900.97,0.6179,1,1000
 Sodium_Hydroxide_(NaOH),2262.8,0.6195,0.5,1540
 Sulphuric_Acid_H2SO4,900.97,0.6179,1,1781
 Volatile_Corrosion_Inhibitor,900.97,0.6179,1,1000
+Sodium_Tripolyphosphate,900.97,0.6179,1,1000
+Fluoride,900.97,0.6179,1,1000

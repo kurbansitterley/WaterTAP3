@@ -1,47 +1,31 @@
-from pyomo.environ import Block, Expression, units as pyunits
+from pyomo.environ import Expression, units as pyunits
 from watertap3.utils import financials
-from watertap3.wt_units.wt_unit import WT3UnitProcess
+from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 
 ## REFERENCE
 ## CAPITAL:
-# Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura) (2008)
-# DOI:10.1002/9780470260036
 
 module_name = 'co2_addition'
-basis_year = 2019
-tpec_or_tic = 'TPEC'
 
-
-class UnitProcess(WT3UnitProcess):
+class UnitProcess(WT3UnitProcessPT):
 
     def fixed_cap(self):
-        '''
 
-        '''
-        self.chem_dict = {}
         time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time], to_units=pyunits.Mgallons / pyunits.day)
+        self.flow_in = pyunits.convert(self.flow_vol_in[time],
+            to_units=pyunits.Mgallons / pyunits.day)
         self.base_fixed_cap_cost = 0.464
         self.cap_scaling_exp = 0.7
         co2_cap = self.base_fixed_cap_cost * self.flow_in ** self.cap_scaling_exp
         return co2_cap
 
-    def elect(self):
-        '''
-        Electricity intensity.
-
-        :return: Electricity intensity [kWh/m3]
-        '''
-        electricity = 0
-        return electricity
-
-    def get_costing(self, unit_params=None, year=None):
+    def get_costing(self):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        financials.create_costing_block(self, basis_year, tpec_or_tic)
+        basis_year = 2019
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                                                           doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=self.elect(),
-                                      doc='Electricity intensity [kwh/m3]')
-        financials.get_complete_costing(self.costing)
+                doc='Unadjusted fixed capital investment')
+        self.electricity = Expression(expr=0,
+                doc='Electricity intensity [kWh/m3]')
+        financials.get_complete_costing(self.costing, basis_year=basis_year)
