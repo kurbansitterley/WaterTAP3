@@ -74,7 +74,9 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
             'scenario': scenario
             }
 
-
+    m.fs.case_study = case_study
+    m.fs.scenario = scenario
+    m.fs.reference = reference
     m.fs.ro_bounds = ro_bounds
     m.fs.desired_recovery = desired_recovery
     if source_reference is None:

@@ -61,6 +61,7 @@ def watertap3_run(m, solver='ipopt', return_df=False, tolerance=None, tee=False,
         run_model(m, solver=solver, objective=objective, tolerance=tolerance, tee=tee)
     else:
         run_model_no_print(m, solver=solver, objective=objective, tolerance=tolerance, tee=tee)
+        print(f'Degrees of Freedom = {degrees_of_freedom(m)}')
     m, ro_stash = standard_ro_run(m, objective=objective, solver=solver, print_it=print_it)
 
     if m.fs.has_ro:
@@ -106,58 +107,59 @@ def watertap3_binary_run(m, solver='gdpopt', return_df=False, objective=True,
     scenario = m.fs.train['scenario']
     case_study = m.fs.train['case_study']
 
-    all_trains_df = get_all_trains(m)
+    all_trains_df = get_all_trains(m) 
     m = set_flow(m, flow_in)
-    try:
-        run_model(m, solver=solver, objective=objective)
-    except ValueError:
-        print('BAD SOLVER STATUS -- Rebuilding and running with 1% higher flow rate...')
-        flow_in_stash = flow_in
-        flow_in = flow_in_stash * 1.01
-        m = watertap3_setup(case_study=case_study, scenario=scenario, 
-                        desired_recovery=m.fs.desired_recovery, ro_bounds=m.fs.ro_bounds, print_it=False)
-        m = get_case_study(m)
-        m = set_flow(m, flow_in)
-        try:
-            m = run_and_return_model(m, solver=solver, objective=objective, only_system=only_system, print_it=print_it)
-        except ValueError:
-            print('BAD SOLVER STATUS AGAIN -- Rebuilding and running with 5% higher flow rate...')
-            flow_in = flow_in_stash * 1.05
-            m = watertap3_setup(case_study=case_study, scenario=scenario, 
-                        desired_recovery=m.fs.desired_recovery, ro_bounds=m.fs.ro_bounds, print_it=False)
-            m = get_case_study(m, print_it=False)
-            m = set_flow(m, flow_in)
-            run_model(m, solver=solver, objective=objective)
+    # try:
+    run_model(m, solver=solver, objective=objective)
+    # except ValueError:
+    #     print('BAD SOLVER STATUS -- Rebuilding and running with 1% higher flow rate...')
+    #     flow_in_stash = flow_in
+    #     flow_in = flow_in_stash * 1.01
+    #     m = watertap3_setup(case_study=case_study, scenario=scenario, 
+    #                     desired_recovery=m.fs.desired_recovery, ro_bounds=m.fs.ro_bounds, print_it=False)
+    #     m = get_case_study(m)
+    #     m = set_flow(m, flow_in)
+    #     try:
+    #         m = run_and_return_model(m, solver=solver, objective=objective, only_system=only_system, print_it=print_it)
+    #     except ValueError:
+    #         print('BAD SOLVER STATUS AGAIN -- Rebuilding and running with 5% higher flow rate...')
+    #         flow_in = flow_in_stash * 1.05
+    #         m = watertap3_setup(case_study=case_study, scenario=scenario, 
+    #                     desired_recovery=m.fs.desired_recovery, ro_bounds=m.fs.ro_bounds, print_it=False)
+    #         m = get_case_study(m, print_it=False)
+    #         m = set_flow(m, flow_in)
+    #         run_model(m, solver=solver, objective=objective)
     m, ro_stash = standard_ro_run(m, objective=objective, solver=solver, print_it=print_it)
     # m = fix_ro_stash(m, ro_stash)
-    # run_model(m, solver=solver, objective=objective)
+    run_model(m, solver=solver, objective=objective)
     # print_results(m, only_system=only_system)
     m = make_decision(m, case_study, scenario, flow_in=flow_in)
     # df_units = m.fs.df_units.copy()
     # m = watertap3_run(m, objective=objective, flow_in=flow_in, solver=solver, print_it=print_it, only_system=only_system, new_df_units=df_units)
-    if m.fs.desired_recovery == 1:
-        df_units = m.fs.df_units.copy()
-        optimized_train = m.fs.optimized_train
-        m = watertap3_run(m, objective=objective, flow_in=flow_in, solver=solver, \
-            print_it=print_it, only_system=only_system, new_df_units=df_units)
-        m.fs.all_trains_df = all_trains_df
-        m.fs.optimized_train = optimized_train
-    else:
-        run_model(m, solver=solver, objective=objective)
-        m, ro_stash = standard_ro_run(m, objective=objective, solver=solver)
-        m = fix_ro_stash(m, ro_stash)
-        run_model(m, solver=solver, objective=False)
+    # if m.fs.desired_recovery == 1:
+    df_units = m.fs.df_units.copy()
+    optimized_train = m.fs.optimized_train
+    m = watertap3_run(m, objective=objective, flow_in=flow_in, solver=solver, \
+        print_it=print_it, only_system=only_system, new_df_units=df_units)
+    m.fs.all_trains_df = all_trains_df
+    m.fs.optimized_train = optimized_train
+    # else:
+    #     run_model(m, solver=solver, objective=objective)
+    #     m, ro_stash = standard_ro_run(m, objective=objective, solver=solver)
+    #     run_model_no_print(m, objective=objective, solver=solver)
+    #     m = fix_ro_stash(m, ro_stash)
+    #     run_model(m, solver='ipopt', objective=False)
     print_results(m, only_system=only_system)
     print(f'Optimized Train is Treatment Train {m.fs.optimized_train}\n')
     print(f'The following units were dropped:')
-    optimized_train = m.fs.df_units.UnitName.to_list()
+    optimized_train_units = m.fs.df_units.UnitName.to_list()
     all_trains = [t for t in m.fs.all_trains_df.binary_train.unique()]
     for t in all_trains:
         if t == m.fs.optimized_train:
             continue
         setattr(m.fs, f'df_units_train_{t}', m.fs.all_trains_df[m.fs.all_trains_df.binary_train == t].copy())
         train_df = getattr(m.fs, f'df_units_train_{t}')
-        dropped_units = [u for u in train_df.UnitName.to_list() if u not in optimized_train]
+        dropped_units = [u for u in train_df.UnitName.to_list() if u not in optimized_train_units]
         print(f'\n\tFrom Treatment Train {t}:')
         for u in dropped_units:
             print(f"\t\t{u.replace('_', ' ').swapcase()}")
@@ -353,7 +355,7 @@ def make_decision(m, case_study, scenario, flow_in=None):
 
     return m
 
-def run_model(m, solver='ipopt', tolerance=None, tee=False, objective=False, 
+def run_model(m, solver='ipopt', tolerance=None, tee=False, objective=True, 
                 max_attempts=3, print_it=False, initial_run=True, mip_solver='glpk', only_system=False):
     
     '''
@@ -765,7 +767,8 @@ def set_bounds(m):
             setattr(m.fs, ('flux_constraint%s' % q), Constraint(
                     expr=getattr(m.fs, key).b[0] >= b[0]))
             q += 1
-
+            setattr(m.fs, ('wr_constraint%s' % q), Constraint(
+                    expr=getattr(m.fs, key).flow_vol_out[0] / getattr(m.fs, key).flow_vol_in[0] >= 0.45))
     return m
 
 

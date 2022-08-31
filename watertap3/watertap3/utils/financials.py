@@ -6,7 +6,7 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 ##############################################################################
-
+import seaborn as sns
 import pandas as pd
 from pyomo.environ import (Block, Expression, Constraint, Param, Var, NonNegativeReals, units as pyunits)
 
@@ -181,6 +181,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
 
     ## COSTING INDICES
     df = get_ind_table(sys_specs.analysis_yr_cost_indices)
+    costing.ind_df = df.copy()
     costing.cap_replacement_parts = df.loc[basis_year].Capital_Factor
     costing.catalysts_chemicals = df.loc[basis_year].CatChem_Factor
     costing.labor_and_other_fixed = df.loc[basis_year].Labor_Factor
@@ -200,32 +201,40 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     costing.insurance_taxes = costing.fixed_cap_inv * sys_specs.insurance_taxes_percent_FCI
 
     cat_chem_df = pd.read_csv('data/chemical_costs.csv', index_col='Material')
-    chem_cost_sum = 0
+    costing.chem_cost_sum = chem_cost_sum = 0
     for chem, dose in chem_dict.items():
-        if chem == 'unit_cost':
-            chem_cost_sum = dose * costing.fixed_cap_inv * 1E6
+        # if chem == 'unit_cost':
+        #     chem_cost_sum = dose * costing.fixed_cap_inv * 1E6
+        # else:
+        chem_name = chem.replace('(', '').replace(')', '').replace(' ', '_').replace('%', 'pct')
+        setattr(costing, f'{chem_name}_unit_price', \
+            Var(initialize=0.1,
+                bounds=(0, None),
+                doc=f'Unit Cost of {chem}'))
+        setattr(costing, f'{chem_name}_dose', \
+            Var(initialize=0.1,
+                bounds=(0, None),
+                doc=f'Dose of {chem}'))
+        chem_price_var = getattr(costing, f'{chem_name}_unit_price')
+        chem_dose_var = getattr(costing, f'{chem_name}_dose')
+        
+        if unit.unit_type == 'chlorination':
+            chem_dose_var.fix(dose)
+        elif chem == 'unit_cost':
+            chem_dose_var.fix(dose)
+            chem_cost_sum += dose * costing.fixed_cap_inv * 1E6
         else:
-            chem_name = chem.replace('(', '').replace(')', '').replace(' ', '_').replace('%', 'pct')
-            setattr(costing, f'{chem_name}_unit_price', \
-                Var(initialize=0.1,
-                    bounds=(0, None),
-                    doc=f'Unit Cost of {chem}'))
-            setattr(costing, f'{chem_name}_dose', \
-                Var(initialize=0.1,
-                    bounds=(0, None),
-                    doc=f'Dose of {chem}'))
-            chem_price_var = getattr(costing, f'{chem_name}_unit_price')
-            chem_dose_var = getattr(costing, f'{chem_name}_dose')
             chem_price_var.fix(cat_chem_df.loc[chem].Price)
-            if unit.unit_type == 'chlorination':
-                chem_dose_var.fix(dose)
-            else:
-                chem_dose_var.fix(dose())
-            chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * \
-                            chem_price_var * dose * sys_specs.plant_cap_utilization
-
-    costing.cat_and_chem_cost = ((chem_cost_sum * 1E-6) * 
-            (1 - costing.catchem_reduction)) * costing.catchem_uncertainty
+            chem_dose_var.fix(dose())
+        # chem_cost_sum += costing.cap_replacement_parts * flow_in_m3yr * \
+        #                 chem_price_var * dose/0.3 * sys_specs.plant_cap_utilization
+        chem_cost_sum += costing.catalysts_chemicals * flow_in_m3yr * \
+                        chem_price_var * dose * sys_specs.plant_cap_utilization
+    # costing.chem_cost_sum = chem_cost_sum
+    costing.cat_and_chem_cost = Var()
+    
+    costing.cat_and_chem_cost_costr = Constraint(expr=costing.cat_and_chem_cost == ((chem_cost_sum * 1E-6) * 
+            (1 - costing.catchem_reduction)) * costing.catchem_uncertainty)
 
     # if not hasattr(costing, 'electricity_cost'):
     costing.electricity_intensity = (unit.electricity * 
