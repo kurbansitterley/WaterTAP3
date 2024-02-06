@@ -3,42 +3,49 @@ from idaes.core import (PhysicalParameterBlock, StateBlockData, declare_process_
 from idaes.core.base.components import Solute
 from idaes.core.base.phases import LiquidPhase, AqueousPhase
 from pyomo.environ import Set, units as pyunits
-
+from pyomo.common.config import ConfigValue, In, Bool
 # from . import generate_constituent_list
 import pandas as pd
 import numpy as np
 import os
 
-__all__ = ['WaterParameterBlock',
-           'WaterStateBlock']
+__all__ = ['WT3ParameterBlock',
+           'WT3StateBlock']
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 crf_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/constituent_removal_factors.csv"
 
-@declare_process_block_class("WaterParameterBlock")
-class PhysicalParameterData(PhysicalParameterBlock):
+@declare_process_block_class("WT3ParameterBlock")
+class WT3ParameterBlockData(PhysicalParameterBlock):
     """
     Property Parameter Block Class
 
     Define component and phase lists, along with base units
     """
-
+    CONFIG = PhysicalParameterBlock.CONFIG()
+    CONFIG.declare(
+        "constituent_list",
+        ConfigValue(
+            domain=list,
+            description="Required argument. List of strings that specify names of constituents.",
+        ),
+    )
     def build(self):
         '''
         Callable method for Block construction.
         '''
         super().build()
 
-        self._state_block_class = WaterStateBlock
+        self._state_block_class = WT3StateBlock
 
         self.Liq = AqueousPhase()
         self.component_list = Set(dimen=1)
         # train_constituent_list = self.generate_constituent_list()
-        self.generate_constituent_list()
+        # self.generate_constituent_list()
         # self.train_constituent_list = ["tds", "toc"]
 
-        for constituent_name in self.train_constituent_list:
+        for constituent_name in self.config.constituent_list:
             self.component_list.add(constituent_name)
-            # self.add_component(constituent_name, Solute())
+            self.add_component(constituent_name, Solute())
             # setattr(self, constituent_name, Component())
 
     def generate_constituent_list(self):
@@ -66,8 +73,8 @@ class PhysicalParameterData(PhysicalParameterBlock):
                 # 'volume': pyunits.liter
                 })
 
-@declare_process_block_class("WaterStateBlock")
-class WaterStateBlockData(StateBlockData):
+@declare_process_block_class("WT3StateBlock")
+class WT3StateBlockData(StateBlockData):
     """
     This won't actually be used for most WaterTAP3 models, but is included to
     allow for future integration with ProteusLib and IDAES

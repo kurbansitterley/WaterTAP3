@@ -11,7 +11,7 @@ from idaes.core import FlowsheetBlock
 from . import module_import
 from .source_wt3 import Source
 from watertap3.utils import Mixer, Splitter, SplitterBinary, financials
-from .water_props import WaterParameterBlock
+from .water_props import WT3ParameterBlock
 from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 
@@ -19,8 +19,8 @@ __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file
 
 treatment_train_setup_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/treatment_train_setup.csv"
 case_study_water_sources_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/case_study_water_sources.csv"
-
-
+water_recovery_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/water_recovery_factors.csv"
+constituent_removal_factors_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/constituent_removal_factors.csv"
 
 __all__ = [
            'watertap3_setup',
@@ -28,7 +28,7 @@ __all__ = [
            'add_unit_process', 
            'add_water_source',
            'get_pfd_dict',
-           'generate_constituent_list',
+        #    'generate_constituent_list',
            'create_wt3_unit',
            'create_arcs',
            'create_arc_dict',
@@ -72,12 +72,12 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
     m = ConcreteModel(name=m_name)
 
     m.fs = FlowsheetBlock(dynamic=False)
-
     m.fs.train = {
             'case_study': case_study,
             'reference': reference,
             'scenario': scenario
             }
+    
 
     m.fs.case_study = case_study
     m.fs.scenario = scenario
@@ -94,19 +94,19 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
     df = pd.read_csv(treatment_train_setup_file) # Read in treatment train input sheet.
 
     water_type_list = []
-    if new_df_units is not None:
-        m.fs.df_units = new_df_units.copy()
-    else:
-        m.fs.df_units = df[((df.Reference == reference) & \
-            (df.Scenario == scenario) & (df.CaseStudy == case_study))].copy()
+    # if new_df_units is not None:
+    #     m.fs.df_units = new_df_units.copy()
+    # else:
+    m.fs.df_units = df[((df.Reference == reference) & \
+        (df.Scenario == scenario) & (df.CaseStudy == case_study))].copy()
 
 
-    if 'binary_train' in m.fs.df_units.columns:
-        cols = ['CaseStudy', 'binary_train', 'Reference', 'Scenario', 'Unit', \
-            'Type', 'UnitName', 'ToUnitName', 'FromPort', 'Parameter']
-    else:
-        cols = ['CaseStudy', 'Reference', 'Scenario', 'Unit', 'Type', \
-            'UnitName', 'ToUnitName', 'FromPort', 'Parameter']
+    # if 'binary_train' in m.fs.df_units.columns:
+    #     cols = ['CaseStudy', 'binary_train', 'Reference', 'Scenario', 'Unit', \
+    #         'Type', 'UnitName', 'ToUnitName', 'FromPort', 'Parameter']
+    # else:
+    cols = ['CaseStudy', 'Reference', 'Scenario', 'Unit', 'Type', \
+        'UnitName', 'ToUnitName', 'FromPort', 'Parameter']
     
     m.fs.df_units = m.fs.df_units[cols].copy()
     
@@ -160,6 +160,7 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
                 f'\nScenario = {scenario_print}')
                 
     m.fs.flow_in_dict = flow_dict
+    m.fs.water = WT3ParameterBlock(constituent_list=generate_constituent_list(m))
 
     return m
 
@@ -178,8 +179,6 @@ def get_case_study(m, new_df_units=None, print_it=True):
 
     pfd_dict = m.fs.pfd_dict
     financials.get_system_specs(m.fs)
-
-    m.fs.water = WaterParameterBlock()
 
     if print_it:
         print('\n=========================ADDING UNIT PROCESSES=========================')
@@ -233,13 +232,13 @@ def add_unit_process(m=None, unit_process_name=None,
 
     if unit_process_type == 'basic_unit':
         setattr(m.fs, unit_process_name,
-            up_module.UnitProcess(default={'property_package': m.fs.water}))
+            up_module.UnitProcess(property_package=m.fs.water))
         basic_unit_name = unit_params['unit_process_name']
         m = create_wt3_unit(m, basic_unit_name, unit_process_name)
 
     else:
         setattr(m.fs, unit_process_name,
-            up_module.UnitProcess({"property_package": m.fs.water}))
+            up_module.UnitProcess(property_package=m.fs.water))
         if not isinstance(getattr(m.fs, unit_process_name), WT3UnitProcessPT): 
             m = create_wt3_unit(m, unit_process_type, unit_process_name)
 
@@ -266,7 +265,7 @@ def add_unit_process(m=None, unit_process_name=None,
     return m
 
 def add_water_source(m=None, source_name=None, water_type=None, flow=None, link_to=None):
-    setattr(m.fs, source_name, Source(default={'property_package': m.fs.water}))
+    setattr(m.fs, source_name, Source(property_package=m.fs.water))
     getattr(m.fs, source_name).set_source()
     getattr(m.fs, source_name).flow_vol_in.fix(flow)
     temp_source_df = m.fs.source_df[m.fs.source_df.water_type == water_type].copy()
@@ -285,7 +284,7 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
 
     def get_removal_factors():
         train = m.fs.train
-        df = pd.read_csv('data/constituent_removal_factors.csv')
+        df = pd.read_csv(constituent_removal_factors_file)
         const_df = df[((df.unit_process == unit_process_type) & (df.scenario == 'baseline') & \
             (df.reference == train['reference']))].copy()
         const_df = const_df[(const_df.case_study == train['case_study']) | \
@@ -307,11 +306,10 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
 
         return removal_dict
 
-    wr_df = pd.read_csv('data/water_recovery_factors.csv')
+    wr_df = pd.read_csv(water_recovery_file)
     case_study_name = m.fs.train['case_study']
     scenario = m.fs.train['scenario']
     unit = getattr(m.fs, unit_process_name)
-
 
     cases = wr_df[wr_df.unit_process == unit_process_type].case_study.to_list()
     scenarios = wr_df[wr_df.unit_process == unit_process_type].scenario.to_list()
@@ -352,7 +350,7 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
 def generate_constituent_list(m):
         train = m.fs.train
         # getting the list of consituents with removal factors that are bigger than 0
-        df = pd.read_csv('data/constituent_removal_factors.csv')
+        df = pd.read_csv(constituent_removal_factors_file)
         df.case_study = np.where(df.case_study == 'default', train['case_study'], df.case_study)
         df = df[df.reference == train['reference']]
         df = df[df.case_study == train['case_study']]
@@ -360,9 +358,9 @@ def generate_constituent_list(m):
         list1 = df[df.value >= 0].constituent.unique()
         list2 = m.fs.source_df.index.unique().to_list()
 
-        m.fs.source_constituents = source_constituents = [x for x in list1 if x in list2]
+        m.fs.constituent_list = constituent_list = [x for x in list1 if x in list2]
 
-        return source_constituents
+        return constituent_list
 
 def get_pfd_dict(df_units):
     ### create pfd_dictionary for treatment train
@@ -471,8 +469,9 @@ def create_mixers(m, mixer_list, arc_dict, arc_i):
                 del arc_dict[key]
 
         # add mixer to model with inlet list
+        mixer_config = dict(property_package=m.fs.water, inlet_list=inlet_list)
         setattr(m.fs, mixer_name,
-                Mixer(default={'property_package': m.fs.water, 'inlet_list': inlet_list}))
+                Mixer(**mixer_config))
 
         # arc from mixer outlet to node
         arc_dict[arc_i] = [mixer_name, 'outlet', j[0], j[1]]
@@ -512,11 +511,11 @@ def create_splitters(m, splitter_list, arc_dict, arc_i):
                             split_dict[uname] = m.fs.pfd_dict[splitter_unit]['Parameter']['split_fraction'][w]
                             w += 1
                             split_fractions = m.fs.pfd_dict[splitter_unit]['Parameter']['split_fraction']
-                            if all(split == 1 for split in split_fractions):
-                                m.fs.choose = True
-                                unit_options[splitter_i] = {splitter_unit: list(split_dict.keys())}
-                            else:
-                                m.fs.choose = False
+                            # if all(split == 1 for split in split_fractions):
+                            #     m.fs.choose = True
+                            #     unit_options[splitter_i] = {splitter_unit: list(split_dict.keys())}
+                            # else:
+                            #     m.fs.choose = False
 
                             # outlet list for when splitter is added to model
                 outlet_name = f'outlet_{outlet_i}'
@@ -542,21 +541,21 @@ def create_splitters(m, splitter_list, arc_dict, arc_i):
                 del arc_dict[key]
 
         # add splitter to model with outlet list
-        if m.fs.choose:
-            all_splitters[splitter_name]['indicator'] = True
-            setattr(m.fs, splitter_name, SplitterBinary(default={'property_package': m.fs.water}))
-            this_splitter = getattr(m.fs, splitter_name)
-            this_splitter.split_dict = split_dict
-            this_splitter._split_from_unit = splitter_unit
-            this_splitter.get_split(split_dict=split_dict)
+        # if m.fs.choose:
+        #     all_splitters[splitter_name]['indicator'] = True
+        #     setattr(m.fs, splitter_name, SplitterBinary(default={'property_package': m.fs.water}))
+        #     this_splitter = getattr(m.fs, splitter_name)
+        #     this_splitter.split_dict = split_dict
+        #     this_splitter._split_from_unit = splitter_unit
+        #     this_splitter.get_split(split_dict=split_dict)
             # setattr(this_splitter, f'unit_list', unit_options[splitter_i])
-        else:
-            setattr(m.fs, splitter_name, Splitter(default={'property_package': m.fs.water}))
-            setattr(m.fs, f'{splitter_name}_outlet_list', outlet_list_up)
-            unit_params = m.fs.pfd_dict[splitter_unit]['Parameter']
-            getattr(m.fs, splitter_name).outlet_list = outlet_list_up
-            # could just have self call the split list directly without reading in unit params. same for all 
-            getattr(m.fs, splitter_name).get_split(outlet_list_up=outlet_list_up, unit_params=unit_params)
+        # else:
+        setattr(m.fs, splitter_name, Splitter(property_package=m.fs.water))
+        setattr(m.fs, f'{splitter_name}_outlet_list', outlet_list_up)
+        unit_params = m.fs.pfd_dict[splitter_unit]['Parameter']
+        getattr(m.fs, splitter_name).outlet_list = outlet_list_up
+        # could just have self call the split list directly without reading in unit params. same for all 
+        getattr(m.fs, splitter_name).get_split(outlet_list_up=outlet_list_up, unit_params=unit_params)
 
         # arc from mixer outlet to node
         arc_dict[arc_i] = [splitter_unit, splitter_port, splitter_name, 'inlet']
@@ -588,7 +587,7 @@ def add_waste_streams(m, arc_i, pfd_dict, mixer_i):
             waste_mixer = f'mixer{mixer_i}'
             m.fs.water_mixer_name = waste_mixer  # used for displaying train. not used for model
             setattr(m.fs, waste_mixer,
-                    Mixer(default={'property_package': m.fs.water, 'inlet_list': waste_inlet_list}))
+                    Mixer(property_package=m.fs.water, inlet_list=waste_inlet_list))
             for b_unit in m.fs.component_objects(Block, descend_into=False):
                 if hasattr(b_unit, 'waste'):
                     if len(getattr(b_unit, 'waste').arcs()) == 0:
