@@ -7,10 +7,12 @@ from pyomo.environ import Set, units as pyunits
 # from . import generate_constituent_list
 import pandas as pd
 import numpy as np
+import os
 
 __all__ = ['WaterParameterBlock',
            'WaterStateBlock']
-
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+crf_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/constituent_removal_factors.csv"
 
 @declare_process_block_class("WaterParameterBlock")
 class PhysicalParameterData(PhysicalParameterBlock):
@@ -31,8 +33,8 @@ class PhysicalParameterData(PhysicalParameterBlock):
         self.Liq = AqueousPhase()
         self.component_list = Set(dimen=1)
         # train_constituent_list = self.generate_constituent_list()
-        # self.generate_constituent_list()
-        self.train_constituent_list = ["tds", "toc"]
+        self.generate_constituent_list()
+        # self.train_constituent_list = ["tds", "toc"]
 
         for constituent_name in self.train_constituent_list:
             self.component_list.add(constituent_name)
@@ -42,7 +44,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
     def generate_constituent_list(self):
         train = self.parent_block().train
         # getting the list of consituents with removal factors that are bigger than 0
-        df = pd.read_csv('data/constituent_removal_factors.csv')
+        df = pd.read_csv(crf_file)
         df.case_study = np.where(df.case_study == 'default', train['case_study'], df.case_study)
         df = df[df.reference == train['reference']]
         df = df[df.case_study == train['case_study']]

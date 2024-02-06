@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from pyomo.environ import Expression, units as pyunits
@@ -6,7 +7,8 @@ from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
 
 ## REFERENCE: 
 # CAPITAL: Table 3.23 - User's Manual for Integrated Treatment Train Toolbox - Potable Reuse (IT3PR) Version 2.0
-
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+chlorine_cost_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/chlorination_cost.csv"
 module_name = 'chlorination'
 
 class UnitProcess(WT3UnitProcessSISO):
@@ -54,7 +56,7 @@ class UnitProcess(WT3UnitProcessSISO):
         except:
             self.chem_name = 'Chlorine'
         self.chem_dict = {self.chem_name: self.dose * 1E-3}
-        self.df = df = pd.read_csv('data/chlorination_cost.csv')
+        self.df = df = pd.read_csv(chlorine_cost_file)
         self.new_dose_list = new_dose_list = np.arange(0, 25.1, 0.1)
         self.cost_list = cost_list = []
         self.flow_list = flow_list = []
