@@ -17,7 +17,7 @@ from enum import Enum
 from pyomo.environ import (Reals, SolverFactory, TerminationCondition, Var)
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import (UnitModelBlockData, declare_process_block_class, useDefault)
-from idaes.core.util.config import (is_physical_parameter_block, is_state_block, list_of_strings)
+from idaes.core.util.config import (is_physical_parameter_block, is_state_block)
 from idaes.core.util.exceptions import (BurntToast, ConfigurationError, PropertyNotSupportedError)
 from idaes.core.util.misc import add_object_reference
 from pyomo.network import Port
@@ -94,7 +94,7 @@ and used when constructing these,
 **Valid values:** {
 see property package for documentation.}'''))
     CONFIG.declare('inlet_list', ConfigValue(
-        domain=list_of_strings,
+        domain=list,
         description='List of inlet names',
         doc='''A list containing names of inlets,
 **default** - None.

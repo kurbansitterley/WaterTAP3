@@ -63,7 +63,7 @@ class WT3UnitProcessPTData(UnitModelBlockData):
         see property package for documentation.}'''))
 
     def build(self):
-        super(WT3UnitProcessPTData, self).build()
+        super( ).build()
         units_meta = self.config.property_package.get_metadata().get_derived_units
         time = self.flowsheet().config.time
 

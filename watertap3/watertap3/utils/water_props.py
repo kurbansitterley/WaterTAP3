@@ -1,7 +1,8 @@
 from idaes.core import (PhysicalParameterBlock, StateBlockData, declare_process_block_class)
-from idaes.core.components import Component
-from idaes.core.phases import LiquidPhase
-from pyomo.environ import units as pyunits
+# from idaes.core.components import Component
+from idaes.core.base.components import Solute
+from idaes.core.base.phases import LiquidPhase, AqueousPhase
+from pyomo.environ import Set, units as pyunits
 
 # from . import generate_constituent_list
 import pandas as pd
@@ -23,16 +24,20 @@ class PhysicalParameterData(PhysicalParameterBlock):
         '''
         Callable method for Block construction.
         '''
-        super(PhysicalParameterData, self).build()
+        super().build()
 
         self._state_block_class = WaterStateBlock
 
-        self.Liq = LiquidPhase()
+        self.Liq = AqueousPhase()
+        self.component_list = Set(dimen=1)
         # train_constituent_list = self.generate_constituent_list()
-        self.generate_constituent_list()
+        # self.generate_constituent_list()
+        self.train_constituent_list = ["tds", "toc"]
 
         for constituent_name in self.train_constituent_list:
-            setattr(self, constituent_name, Component())
+            self.component_list.add(constituent_name)
+            # self.add_component(constituent_name, Solute())
+            # setattr(self, constituent_name, Component())
 
     def generate_constituent_list(self):
         train = self.parent_block().train
@@ -56,7 +61,7 @@ class PhysicalParameterData(PhysicalParameterBlock):
                 'mass': pyunits.kg,
                 'amount': pyunits.mol,
                 'temperature': pyunits.K,
-                'volume': pyunits.liter
+                # 'volume': pyunits.liter
                 })
 
 @declare_process_block_class("WaterStateBlock")
