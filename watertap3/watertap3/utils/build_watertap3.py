@@ -1,4 +1,5 @@
 import ast
+import os
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,13 @@ from watertap3.utils import Mixer, Splitter, SplitterBinary, financials
 from .water_props import WaterParameterBlock
 from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
 from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
+
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+treatment_train_setup_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/treatment_train_setup.csv"
+case_study_water_sources_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/case_study_water_sources.csv"
+
+
 
 __all__ = [
            'watertap3_setup',
@@ -43,8 +51,7 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
         '''
         Read in water source data. 
         '''
-        input_file = 'data/case_study_water_sources.csv'
-        df = pd.read_csv(input_file, index_col='variable')
+        df = pd.read_csv(case_study_water_sources_file, index_col='variable')
         if 'test' in case_study:
             case_study = 'test'
         try:
@@ -64,9 +71,7 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
     m_name = f'{case_study_print}: {scenario_print}'
     m = ConcreteModel(name=m_name)
 
-    m.fs = FlowsheetBlock(default={
-            'dynamic': dynamic
-            })
+    m.fs = FlowsheetBlock(dynamic=False)
 
     m.fs.train = {
             'case_study': case_study,
@@ -86,7 +91,7 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
     if source_scenario is None:
         source_scenario = scenario
 
-    df = pd.read_csv('data/treatment_train_setup.csv') # Read in treatment train input sheet.
+    df = pd.read_csv(treatment_train_setup_file) # Read in treatment train input sheet.
 
     water_type_list = []
     if new_df_units is not None:
@@ -234,7 +239,7 @@ def add_unit_process(m=None, unit_process_name=None,
 
     else:
         setattr(m.fs, unit_process_name,
-            up_module.UnitProcess(default={'property_package': m.fs.water}))
+            up_module.UnitProcess({"property_package": m.fs.water}))
         if not isinstance(getattr(m.fs, unit_process_name), WT3UnitProcessPT): 
             m = create_wt3_unit(m, unit_process_type, unit_process_name)
 

@@ -6,7 +6,8 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 ##############################################################################
-import seaborn as sns
+
+import os
 import pandas as pd
 from pyomo.environ import (Block, Expression, Constraint, Param, Var, NonNegativeReals, units as pyunits)
 
@@ -17,12 +18,17 @@ __all__ = ['SystemSpecs', 'get_complete_costing', 'get_ind_table', 'get_system_s
 
 last_year_for_cost_indicies = 2050
 
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+case_study_TEA_basis_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/case_study_TEA_basis.csv"
+industrial_electricity_costs_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/industrial_electricity_costs_2020.csv"
+chem_costs_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/chemical_costs.csv"
+plant_costs_indices_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/plant_cost_indices.csv"
 
 class SystemSpecs():
 
     def __init__(self, train=None):
-        basis_data = pd.read_csv('data/case_study_TEA_basis.csv', index_col='case_study')
-        elec_cost = pd.read_csv('data/industrial_electricity_costs_2020.csv', index_col='location')
+        basis_data = pd.read_csv(case_study_TEA_basis_file, index_col='case_study')
+        elec_cost = pd.read_csv(industrial_electricity_costs_file, index_col='location')
         elec_cost.index = elec_cost.index.str.lower()
         case_study = train['case_study']
         if 'test' in case_study:
@@ -200,7 +206,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     costing.lab = costing.fixed_cap_inv * sys_specs.lab_fees_percent_FCI
     costing.insurance_taxes = costing.fixed_cap_inv * sys_specs.insurance_taxes_percent_FCI
 
-    cat_chem_df = pd.read_csv('data/chemical_costs.csv', index_col='Material')
+    cat_chem_df = pd.read_csv(chem_costs_file, index_col='Material')
     costing.chem_cost_sum = chem_cost_sum = 0
     for chem, dose in chem_dict.items():
         # if chem == 'unit_cost':
@@ -271,7 +277,7 @@ def get_ind_table(analysis_yr_cost_indices):
     :type analysis_yr_cost_indices: int
     :return: Indicies DataFrame
     '''
-    df = pd.read_csv('data/plant_cost_indices.csv')
+    df = pd.read_csv(plant_costs_indices_file)
 
     df1 = pd.DataFrame()
     for name in df.columns[1:]:
