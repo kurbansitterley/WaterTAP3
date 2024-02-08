@@ -78,9 +78,7 @@ class SplitterProcessData(UnitModelBlockData):
     )
 
     def build(self):
-        super(SplitterProcessData, self).build()
-
-    # def get_split(self, outlet_dict=None):
+        super().build()
 
         self.split_fraction_vars = []
         tmp_dict = dict(**self.config.property_package_args)

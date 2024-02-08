@@ -77,11 +77,15 @@ class SourceData(UnitModelBlockData):
         tmp_dict["parameters"] = self.config.property_package
         tmp_dict["defined_state"] = True
         self.properties = prop = self.config.property_package.state_block_class(
-            doc="Material properties of inlet stream", **tmp_dict
+            doc="Material properties of source", **tmp_dict
         )
+        prop.flow_mass_comp[...]
+        prop.temperature.fix()
+        prop.pressure.fix()
+
         # self.add_outlet_port(name="outlet", block=self.properties)
         
-        self.outlet = Port(noruleinit=True, doc='Inlet Port')
+        self.outlet = Port(noruleinit=True, doc='Source Port')
         self.outlet.add(prop.flow_vol, 'flow_vol')
         self.outlet.add(prop.conc_mass_comp, 'conc_mass')
         self.outlet.add(prop.temperature, 'temperature')
