@@ -9,11 +9,14 @@ from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
 
 from . import module_import
-from .source_wt3 import Source
-from watertap3.utils import Mixer, Splitter, SplitterBinary, financials
-from .water_props import WT3ParameterBlock
-from watertap3.wt_units.wt_unit_pt import WT3UnitProcessPT
-from watertap3.wt_units.wt_unit_siso import WT3UnitProcessSISO
+# from .source_wt3 import Source
+from ..core.source_wt3 import Source
+from ..core.mixer_wt3 import Mixer
+from ..core.splitter_wt3 import Splitter
+from ..core.water_props import WT3ParameterBlock
+from watertap3.core.wt3_unit_pt import WT3UnitProcessPT
+from watertap3.core.wt3_unit_siso import WT3UnitProcessSISOData
+from ..costing import WT3Costing, WT3UnitCosting
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
@@ -160,7 +163,9 @@ def watertap3_setup(dynamic=False, case_study=None, reference='nawi', scenario='
                 f'\nScenario = {scenario_print}')
                 
     m.fs.flow_in_dict = flow_dict
-    m.fs.water = WT3ParameterBlock(constituent_list=generate_constituent_list(m))
+    x = generate_constituent_list(m)
+    m.fs.water = WT3ParameterBlock(constituent_list=x)
+    m.fs.costing = WT3Costing()
 
     return m
 
@@ -169,16 +174,16 @@ def get_case_study(m, new_df_units=None, print_it=True):
     Function to add constituents and unit processes to flowsheet and connect 
     all ports.
     '''
-    if new_df_units is not None:
-        m.fs.df_units = new_df_units
-        m.fs.pfd_dict = get_pfd_dict(new_df_units)
-        m.fs.new_case_study = True
-    else:
-        m.fs.pfd_dict = get_pfd_dict(m.fs.df_units)
-        m.fs.new_case_study = False
+    # if new_df_units is not None:
+    #     m.fs.df_units = new_df_units
+    #     m.fs.pfd_dict = get_pfd_dict(new_df_units)
+    #     m.fs.new_case_study = True
+    # else:
+    m.fs.pfd_dict = pfd_dict = get_pfd_dict(m.fs.df_units)
+    # m.fs.new_case_study = False
 
-    pfd_dict = m.fs.pfd_dict
-    financials.get_system_specs(m.fs)
+    # pfd_dict = m.fs.pfd_dict
+    # financials.get_system_specs(m.fs)
 
     if print_it:
         print('\n=========================ADDING UNIT PROCESSES=========================')
@@ -239,17 +244,21 @@ def add_unit_process(m=None, unit_process_name=None,
     else:
         setattr(m.fs, unit_process_name,
             up_module.UnitProcess(property_package=m.fs.water))
-        if not isinstance(getattr(m.fs, unit_process_name), WT3UnitProcessPT): 
-            m = create_wt3_unit(m, unit_process_type, unit_process_name)
+        # if not isinstance(getattr(m.fs, unit_process_name), WT3UnitProcessPT): 
+        m = create_wt3_unit(m, unit_process_type, unit_process_name)
 
     unit = getattr(m.fs, unit_process_name)
     unit.chem_dict = {}
-    unit.costing = Block()
-    unit.tpec_tic = Var(
-        bounds=(0, None),
-        initialize=1,
-        doc='Capital factor (TPEC or TIC)')
-    unit.tpec_tic.fix(1)
+    # unit.costing = Block()
+    if isinstance(unit_params, float):
+        unit_params = {}
+    unit.unit_params = unit_params
+    unit.costing = WT3UnitCosting(flowsheet_costing_block=m.fs.costing)
+    # unit.tpec_tic = Var(
+    #     bounds=(0, None),
+    #     initialize=1,
+    #     doc='Capital factor (TPEC or TIC)')
+    # unit.tpec_tic.fix(1)
 
     unit.unit_type = unit_process_type
     unit.unit_name = unit_process_name
@@ -257,27 +266,28 @@ def add_unit_process(m=None, unit_process_name=None,
         replace('Uv', 'UV').replace('And', '&').replace('Sw', 'SW').replace('Gac', 'GAC').replace('Ph', 'pH').replace('Bc', 'BC'). \
         replace('Wwtp', 'WWTP').replace('Pac', 'PAC').replace('Co2', 'CO2').replace('Kmno4', 'KMnO4')
     unit.unit_kind = unit_process_kind
-    if isinstance(unit_params, float):
-        unit_params = {}
-    unit.unit_params = unit_params
-    unit.get_costing()
+
+    # unit.get_costing()
 
     return m
 
 def add_water_source(m=None, source_name=None, water_type=None, flow=None, link_to=None):
     setattr(m.fs, source_name, Source(property_package=m.fs.water))
-    getattr(m.fs, source_name).set_source()
-    getattr(m.fs, source_name).flow_vol_in.fix(flow)
+    # getattr(m.fs, source_name).set_source()
+    # getattr(m.fs, source_name).flow_vol_in.fix(flow)
+    source = getattr(m.fs, source_name)
+    source.properties.flow_vol.fix(flow)
     temp_source_df = m.fs.source_df[m.fs.source_df.water_type == water_type].copy()
-    train_constituent_list = list(getattr(m.fs, source_name).config.property_package.component_list)
+    train_constituent_list = list(source.config.property_package.component_list)
     for constituent_name in train_constituent_list:
         if constituent_name in temp_source_df.index:
             conc = temp_source_df.loc[constituent_name].value
-            getattr(m.fs, source_name).conc_mass_in[:, constituent_name].fix(conc)
+            source.properties.conc_mass_comp[constituent_name].fix(conc)
         else:
-            getattr(m.fs, source_name).conc_mass_in[:, constituent_name].fix(0)
+            source.properties.conc_mass_comp[constituent_name].fix(0)
 
-    getattr(m.fs, source_name).pressure_in.fix(1)
+    source.properties.pressure.fix(101325)
+    source.properties.temperature.fix(298)
     return m
 
 def create_wt3_unit(m, unit_process_type, unit_process_name):
@@ -317,7 +327,7 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
         (wr_df.case_study == 'default'))].recovery
     tups = zip(cases, scenarios)
 
-    if not isinstance(unit, WT3UnitProcessSISO):
+    if not isinstance(unit, WT3UnitProcessSISOData):
 
         if (case_study_name, scenario) in tups:
             case_study_df = wr_df[((wr_df.unit_process == unit_process_type) & \
@@ -326,24 +336,26 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
                 flow_recovery_factor = float(case_study_df.recovery)
                 getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
         else:
-            if default_df.empty:
-                raise TypeError(f'There is no default water recovery for {unit_process_type}.\n'
-                                'Check that there is an entry for this unit in water_recovery.csv')
-            if 'calculated' not in default_df.max():
-                flow_recovery_factor = float(default_df)
-                getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
+            pass
+            # if default_df.empty:
+            #     raise TypeError(f'There is no default water recovery for {unit_process_type}.\n'
+            #                     'Check that there is an entry for this unit in water_recovery.csv')
+            # if 'calculated' not in default_df.max():
+            #     flow_recovery_factor = float(default_df)
+            #     getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
 
-    train_constituent_removal_factors = \
-        get_removal_factors()
+    train_constituent_removal_factors = get_removal_factors()
+    
+    if hasattr(unit, "removal_fraction"):
 
-    for constituent_name in getattr(m.fs, unit_process_name).config.property_package.component_list:
-        
-        if constituent_name in train_constituent_removal_factors.keys():
-            unit.removal_fraction[:, constituent_name].fix(train_constituent_removal_factors[constituent_name])
-        elif isinstance(unit, WT3UnitProcessSISO):
-            unit.removal_fraction[:, constituent_name].fix(0)
-        else:
-            unit.removal_fraction[:, constituent_name].fix(1E-5)
+        for constituent_name in unit.config.property_package.component_list:
+            
+            if constituent_name in train_constituent_removal_factors.keys():
+                unit.removal_fraction[constituent_name].fix(train_constituent_removal_factors[constituent_name])
+            elif isinstance(unit, WT3UnitProcessSISOData):
+                unit.removal_fraction[constituent_name].fix(0)
+            else:
+                unit.removal_fraction[constituent_name].fix(1e-5)
     return m
 
 
