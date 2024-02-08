@@ -8,154 +8,150 @@
 ##############################################################################
 
 
-from idaes.core import (UnitModelBlockData, declare_process_block_class, useDefault)
+from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.environ import Constraint, NonNegativeReals, Var, units as pyunits
 from pyomo.network import Port
 
-module_name = 'splitter_wt3'
+module_name = "splitter_wt3"
 
-__all__ = ['Splitter']
+__all__ = ["Splitter"]
 
 
-@declare_process_block_class('Splitter')
+@declare_process_block_class("Splitter")
 class SplitterProcessData(UnitModelBlockData):
     CONFIG = ConfigBlock()
-    CONFIG.declare("dynamic", ConfigValue(
-        domain=In([False]),
-        default=False,
-        description="Dynamic model flag - must be False",
-        doc="""Indicates whether this model will be dynamic or not,
-        **default** = False. Equilibrium Reactors do not support dynamic behavior."""))
-    CONFIG.declare("has_holdup", ConfigValue(
-        default=False,
-        domain=In([False]),
-        description="Holdup construction flag - must be False",
-        doc="""Indicates whether holdup terms should be constructed or not.
+    CONFIG.declare(
+        "dynamic",
+        ConfigValue(
+            domain=In([False]),
+            default=False,
+            description="Dynamic model flag - must be False",
+            doc="""Indicates whether this model will be dynamic or not,
+        **default** = False. Equilibrium Reactors do not support dynamic behavior.""",
+        ),
+    )
+    CONFIG.declare(
+        "has_holdup",
+        ConfigValue(
+            default=False,
+            domain=In([False]),
+            description="Holdup construction flag - must be False",
+            doc="""Indicates whether holdup terms should be constructed or not.
         **default** - False. Equilibrium reactors do not have defined volume, thus
-        this must be False."""))
-    CONFIG.declare("property_package", ConfigValue(
-        default=useDefault,
-        domain=is_physical_parameter_block,
-        description="Property package to use for control volume",
-        doc="""Property parameter object used to define property calculations,
+        this must be False.""",
+        ),
+    )
+    CONFIG.declare(
+        "property_package",
+        ConfigValue(
+            default=useDefault,
+            domain=is_physical_parameter_block,
+            description="Property package to use for control volume",
+            doc="""Property parameter object used to define property calculations,
         **default** - useDefault.
         **Valid values:** {
         **useDefault** - use default package from parent model or flowsheet,
-        **PhysicalParameterObject** - a PhysicalParameterBlock object.}"""))
-    CONFIG.declare("property_package_args", ConfigBlock(
-        implicit=True,
-        description="Arguments to use for constructing property packages",
-        doc="""A ConfigBlock with arguments to be passed to a property block(s)
+        **PhysicalParameterObject** - a PhysicalParameterBlock object.}""",
+        ),
+    )
+    CONFIG.declare(
+        "property_package_args",
+        ConfigBlock(
+            implicit=True,
+            description="Arguments to use for constructing property packages",
+            doc="""A ConfigBlock with arguments to be passed to a property block(s)
         and used when constructing these,
         **default** - None.
         **Valid values:** {
-        see property package for documentation.}"""))
+        see property package for documentation.}""",
+        ),
+    )
+    CONFIG.declare(
+        "outlet_dict",
+        ConfigValue(
+            default=dict(),
+            domain=dict,
+            description="Dict of outlet names and corresponding split fractions",
+        ),
+    )
 
     def build(self):
         super(SplitterProcessData, self).build()
 
-    def get_split(self, outlet_list_up=None, unit_params=None):
-        time = self.flowsheet().config.time
-        t = self.flowsheet().config.time.first()
-        units_meta = self.config.property_package.get_metadata().get_derived_units
-        self.outlet_list = outlet_list = list(outlet_list_up.keys())
+    # def get_split(self, outlet_dict=None):
+
         self.split_fraction_vars = []
+        tmp_dict = dict(**self.config.property_package_args)
+        tmp_dict["has_phase_equilibrium"] = False
+        tmp_dict["parameters"] = self.config.property_package
+        tmp_dict["defined_state"] = True
+        self.properties_in = prop_in = self.config.property_package.state_block_class(
+            doc="Material properties of inlet stream", **tmp_dict
+        )
 
-        self.inlet = Port(noruleinit=True, doc='Inlet Port')
+        self.inlet = Port(noruleinit=True, doc="Inlet Port")
+        self.inlet.add(prop_in.flow_vol, "flow_vol")
+        self.inlet.add(prop_in.conc_mass_comp, "conc_mass")
+        self.inlet.add(prop_in.temperature, "temperature")
+        self.inlet.add(prop_in.pressure, "pressure")
 
-        self.flow_vol_in = Var(time,
-            initialize=1,
-            domain=NonNegativeReals,
-            bounds=(1E-9, 1E2),
-            units=units_meta('volume') / units_meta('time'),
-            doc='Volumetric flowrate of water in to splitter [m3/s]')
-        self.conc_mass_in = Var(time,
-            self.config.property_package.component_list,
-            initialize=1E-3,
-            units=units_meta('mass') / units_meta('volume'),
-            doc='Mass concentration of species at outlet')
-        self.temperature_in = Var(time,
-            initialize=300,
-            units=units_meta('temperature'),
-            doc='Temperature at outlet')
-        self.pressure_in = Var(time,
-            initialize=1E5,
-            units=units_meta('pressure'),
-            doc='Pressure at outlet')
-
-        self.inlet.add(self.flow_vol_in, 'flow_vol')
-        self.inlet.add(self.conc_mass_in, 'conc_mass')
-        self.inlet.add(self.temperature_in, 'temperature')
-        self.inlet.add(self.pressure_in, 'pressure')
-
-        for p in outlet_list:
-            setattr(self, p, Port(noruleinit=True, doc='Outlet Port'))
-
-            setattr(self, ('flow_vol_%s' % p), Var(time,
+        for outlet, split in self.config.outlet_dict.items():
+            tmp_port = Port(noruleinit=True, doc=f"{outlet.title()} Port")
+            tmp_prop = self.config.property_package.state_block_class(
+                doc=f"Material properties of {outlet} stream", **tmp_dict
+            )
+            tmp_split_var_name = f"split_fraction_{outlet}"
+            tmp_split_var = Var(
                 initialize=0.5,
-                domain=NonNegativeReals,
-                bounds=(1E-9, 1E2),
-                units=units_meta('volume') / units_meta('time'),
-                doc='Volumetric flowrate of water out of unit'))
-
-            setattr(self, ('conc_mass_%s' % p), Var(time,
-                self.config.property_package.component_list,
-                initialize=1E-3,
-                units=units_meta('mass') / units_meta('volume'),
-                doc='Mass concentration of species at outlet'))
-
-            setattr(self, ('pressure_%s' % p), Var(time,
-                initialize=1E5,
-                domain=NonNegativeReals,
-                units=units_meta('pressure'),
-                doc='Pressure at outlet'))
-
-            setattr(self, ('temperature_%s' % p), Var(time,
-                initialize=300,
-                domain=NonNegativeReals,
-                units=units_meta('temperature'),
-                doc='Temperature at outlet'))
-
-            setattr(self, ('split_fraction_%s' % p), Var(time,
-                initialize=0.5,
-                domain=NonNegativeReals,
-                bounds=(0.01, 0.99),
+                bounds=(0.001, 0.999),
                 units=pyunits.dimensionless,
-                doc='split fraction'))
+                doc=f"Split fraction for {outlet}",
+            )
+            tmp_split_var.construct()
 
-            split_fraction_var_name = ('split_fraction_%s' % p)
-            self.split_fraction_vars.append(getattr(self, split_fraction_var_name)[t])
-            getattr(self, p).add(getattr(self, ('temperature_%s' % p)), 'temperature')
-            getattr(self, p).add(getattr(self, ('pressure_%s' % p)), 'pressure')
-            getattr(self, p).add(getattr(self, ('conc_mass_%s' % p)), 'conc_mass')
-            getattr(self, p).add(getattr(self, ('flow_vol_%s' % p)), 'flow_vol')
+            if split != "NA":
+                tmp_split_var.fix(split)
 
-        for p in outlet_list:
-            if outlet_list_up[p] == 'NA':
-                getattr(self, ('split_fraction_%s' % p)).unfix()
-            else:
-                getattr(self, ('split_fraction_%s' % p)).fix(outlet_list_up[p])
+            setattr(self, outlet, tmp_port)
+            setattr(self, f"properties_{outlet}", tmp_prop)
 
-        for p in outlet_list:
-            for j in self.config.property_package.component_list:
-                setattr(self, ('%s_%s_eq' % (p, j)), Constraint(expr=self.conc_mass_in[t, j]
-                        == getattr(self, ('conc_mass_%s' % p))[t, j]))
+            setattr(
+                tmp_prop,
+                tmp_split_var_name,
+                tmp_split_var,
+            )
 
-        self.split_fraction_constr = Constraint(
-                expr=sum(self.split_fraction_vars) <= 1.025)
-        self.split_fraction_constr2 = Constraint(
-                expr=sum(self.split_fraction_vars) >= 0.975)
-        for p in outlet_list:
-            setattr(self, ('%s_eq_flow' % p),
-                    Constraint(expr=getattr(self, ('split_fraction_%s' % p))[t] * \
-                                pyunits.convert(self.flow_vol_in[t], to_units=pyunits.m**3/pyunits.hr)
-                                    == pyunits.convert(getattr(self, ('flow_vol_%s' % p))[t], 
-                                    to_units=pyunits.m**3/pyunits.hr)))
+            self.split_fraction_vars.append(tmp_split_var)
 
-        for p in outlet_list:
-            setattr(self, ('%s_eq_temp' % (p)), Constraint(expr=
-                self.temperature_in[t] == getattr(self, ('temperature_%s' % p))[t]))
-            setattr(self, ('%s_eq_pres' % (p)), Constraint(expr=
-                self.pressure_in[t] == getattr(self, ('pressure_%s' % p))[t]))
+            tmp_port.add(tmp_prop.conc_mass_comp, "conc_mass")
+            tmp_port.add(tmp_prop.flow_vol, "flow_vol")
+            tmp_port.add(tmp_prop.temperature, "temperature")
+            tmp_port.add(tmp_prop.pressure, "pressure")
+
+            @tmp_prop.Constraint(
+                self.config.property_package.component_list,
+                doc=f"Component balance for {outlet}",
+            )
+            def component_mass_balance(b, j):
+                return prop_in.conc_mass_comp[j] == b.conc_mass_comp[j]
+
+            @tmp_prop.Constraint(doc=f"Flow split for {outlet}")
+            def flow_split(b):
+                return tmp_split_var * prop_in.flow_vol == b.flow_vol
+
+            @tmp_prop.Constraint(doc=f"Isothermal for {outlet}")
+            def isothermal_split(b):
+                return b.temperature == prop_in.temperature
+
+            @tmp_prop.Constraint(doc=f"Isobaric for {outlet}")
+            def isobaric_split(b):
+                return b.pressure == prop_in.pressure
+
+        self.split_fraction_tot_ub = Constraint(
+            expr=sum(self.split_fraction_vars) <= 1.025
+        )
+        self.split_fraction_tot_lb = Constraint(
+            expr=sum(self.split_fraction_vars) >= 0.975
+        )
