@@ -1,7 +1,7 @@
 import pandas as pd
 from pyomo.environ import Block, Constraint, Expression, NonNegativeReals, Var, exp, log, units as pyunits
 from watertap3.utils import financials
-from watertap3.core.wt3_unit import WT3UnitProcess
+from watertap3.core.wt3_unit_sido import WT3UnitProcess
 
 ## REFERENCE: ADD REFERENCE HERE
 

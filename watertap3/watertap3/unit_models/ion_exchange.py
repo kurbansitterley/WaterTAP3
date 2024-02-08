@@ -5,7 +5,7 @@ from pyomo.environ import units as pyunits
 # from pyomo.repn.plugins.baron_writer import NonNegativeReals
 
 from watertap3.utils import financials
-from watertap3.core.wt3_unit import WT3UnitProcess
+from watertap3.core.wt3_unit_sido import WT3UnitProcess
 import idaes.core.util.scaling as iscale
 
 ## REFERENCE: ADD REFERENCE HERE

@@ -1,7 +1,7 @@
 from pyomo.environ import Expression, Constraint, \
     NonNegativeReals, Var, units as pyunits
 from watertap3.utils import financials
-from watertap3.core.wt3_unit import WT3UnitProcess
+from watertap3.core.wt3_unit_sido import WT3UnitProcess
 
 ## REFERENCE
 ## EVAPORATION RATE OF PURE WATER ESTIMATION:

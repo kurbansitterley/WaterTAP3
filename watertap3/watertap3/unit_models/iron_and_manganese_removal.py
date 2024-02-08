@@ -1,6 +1,7 @@
-from pyomo.environ import Expression, units as pyunits
-from watertap3.utils import financials
-from watertap3.core.wt3_unit import WT3UnitProcess
+from pyomo.environ import Var, Param, units as pyunits
+from idaes.core import declare_process_block_class
+from watertap.costing.util import make_capital_cost_var
+from watertap3.core.wt3_unit_siso import WT3UnitProcessSISOData
 
 ## REFERENCE
 ## CAPITAL:
@@ -13,48 +14,214 @@ from watertap3.core.wt3_unit import WT3UnitProcess
 # Loh, H. P., Lyons, Jennifer, and White, Charles W. Process Equipment Cost Estimation, Final Report.
 # United States: N. p., 2002. Web. doi:10.2172/797810.
 
+module_name = "iron_and_manganese_removal"
 
-module_name = 'iron_and_manganese_removal'
 
-class UnitProcess(WT3UnitProcess):
+def cost_iron_and_manganese_removal(blk):
+    unit_params = blk.unit_model.unit_params
 
-    def fixed_cap(self):
-        time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time],
-            to_units=pyunits.m**3/pyunits.hr)
-        self.cap_scaling_exp = 0.7
-        self.cap_scaling_val = 4732 * (pyunits.m**3/pyunits.hour)
-        self.number_of_units = 6
-        self.filter_surf_area = 580 * pyunits.m ** 2
-        self.filter_surf_area = pyunits.convert(self.filter_surf_area,
-            to_units=pyunits.ft ** 2)
-        self.air_water_ratio = 0.001 * pyunits.dimensionless
-        self.air_flow_rate = self.air_water_ratio * self.cap_scaling_val
-        self.air_blower_cap = 100000
+    blk.basis_year = 2018
+    blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
+
+    blk.flow_scaling_base = Var(
+        initialize=4732,
+        bounds=(0, None),
+        units=pyunits.m**3 / pyunits.hr,
+        doc="Flow scaling base",
+    )
+    blk.capital_cost_exp = Var(
+        initialize=0.7,
+        bounds=(0, None),
+        units=pyunits.dimensionless,
+        doc="Fe/Mn removal capital cost exponent",
+    )
+    blk.filter_capital_cost_intercept = Var(
+        initialize=21377,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Dual media filtration capital cost equation - intercept",
+    )
+    blk.filter_capital_cost_slope = Var(
+        initialize=38.319,
+        bounds=(0, None),
+        units=blk.basis_currency / pyunits.ft,
+        doc="Dual media filtration capital cost equation - slope",
+    )
+    blk.backwash_capital_cost_intercept = Var(
+        initialize=92947,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Backwashing system capital cost equation - intercept",
+    )
+    blk.backwash_capital_cost_slope = Var(
+        initialize=580,
+        bounds=(0, None),
+        units=blk.basis_currency / pyunits.ft,
+        doc="Backwashing system capital cost equation - slope",
+    )
+    blk.energy_intensity_blower = Var(
+        initialize=110.2,  # converted from 147.8 hp / (m3/hr)
+        bounds=(0, None),
+        units=pyunits.kWh / pyunits.m**3,
+        doc="Energy intensity of blower",
+    )
+    blk.blower_capital_cost = Var(
+        initialize=100000,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Blower capital cost",
+    )
+
+    for k, v in unit_params.items():
+        if hasattr(blk, k):
+            getattr(blk, k).fix(v)
+
+    blk.fix_all_vars()
+
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, "TPEC")
+    filter_area_ft2 = pyunits.convert(
+        blk.unit_model.filter_surface_area, to_units=pyunits.ft**2
+    )
+
+    blk.capital_cost_base = Var(
+        initialize=1e5,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Fe/Mn capital cost base",
+    )
+    blk.filter_capital_cost = Var(
+        initialize=1e5,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Filtration capital cost",
+    )
+    blk.backwash_capital_cost = Var(
+        initialize=1e5,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Backwash system capital cost",
+    )
+
+    @blk.Constraint(doc="Filter capital cost equation")
+    def filter_capital_cost_constraint(b):
+        return (
+            b.filter_capital_cost
+            == (
+                b.filter_capital_cost_intercept
+                + b.filter_capital_cost_slope * filter_area_ft2
+            )
+            * b.unit_model.number_units
+        )
+
+    @blk.Constraint(doc="Backwashing system capital cost equation")
+    def backwash_capital_cost_constraint(b):
+        return (
+            b.backwash_capital_cost
+            == b.backwash_capital_cost_intercept
+            + b.backwash_capital_cost_slope * filter_area_ft2
+        )
+
+    @blk.Constraint(doc="Base capital cost")
+    def capital_cost_base_constraint(b):
+        return (
+            b.capital_cost_base
+            == b.blower_capital_cost + b.filter_capital_cost + b.backwash_capital_cost
+        )
+
+    @blk.Constraint(doc="Unit total capital cost")
+    def capital_cost_constraint(b):
+        flow_m3_hr = pyunits.convert(
+            b.unit_model.properties_in.flow_vol, to_units=pyunits.m**3 / pyunits.hr
+        )
+        return b.capital_cost == pyunits.convert(
+            b.capital_cost_base
+            * (flow_m3_hr / b.flow_scaling_base) ** b.capital_cost_exp,
+            to_units=b.costing_package.base_currency,
+        )
+
+    @blk.Expression(doc="Blower power required")
+    def power_required(b):
+        return pyunits.convert(
+            b.energy_intensity_blower * b.unit_model.air_flow_rate, to_units=pyunits.kW
+        )
+
+    blk.costing_package.cost_flow(blk.power_required, "electricity")
+
+
+@declare_process_block_class("UnitProcess")
+class UnitProcessData(WT3UnitProcessSISOData):
+    def build(self):
+        super().build()
+
+        self.number_units = Param(
+            initialize=6,
+            units=pyunits.dimensionless,
+            doc="Number of units",
+        )
+        self.filter_surface_area = Param(
+            initialize=580,
+            units=pyunits.m**2,
+            doc="Filter surface area of unit",
+        )
+        self.air_water_ratio = Param(
+            initialize=0.001,
+            units=pyunits.dimensionless,
+            doc="Air-to-water ratio for blower",
+        )
+
+        self.handle_unit_params()
         
-        dual_media_filter_cap = 21377 + 38.319 * self.filter_surf_area
-        filter_backwash_cap = 92947 + 292.44 * self.filter_surf_area
-        total_cap_cost = (((self.air_blower_cap + filter_backwash_cap + \
-            (dual_media_filter_cap * self.number_of_units))) * self.tpec_tic) * 1E-6
-        cap_scaling_factor = self.flow_in / self.cap_scaling_val
-        fe_mn_cap = total_cap_cost * cap_scaling_factor ** self.cap_scaling_exp
-        return fe_mn_cap
+        self.air_flow_rate = Var(
+            initialize=100,
+            bounds=(0, None),
+            units=pyunits.m**3 / pyunits.s,
+            doc="Air-to-water ratio for blower",
+        )
 
-    def elect(self):
-        self.blower_power = 147.8 * (pyunits.hp / (pyunits.m**3/pyunits.hour)) * self.air_flow_rate
-        self.blower_power = pyunits.convert(self.blower_power,
-            to_units=pyunits.kilowatt)
-        electricity = self.blower_power / self.flow_in
-        return electricity
+        @self.Constraint(doc="Air flow rate equation")
+        def air_flow_rate_constraint(b):
+            return b.air_flow_rate == b.air_water_ratio * b.properties_in.flow_vol
 
-    def get_costing(self):
-        '''
-        Initialize the unit in WaterTAP3.
-        '''
-        basis_year = 2014
-        tpec_tic = 'TPEC'
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=self.elect(),
-                doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
+    @property 
+    def default_costing_method(self):
+        return cost_iron_and_manganese_removal
+    # def fixed_cap(self):
+    #     # time = self.flowsheet().config.time.first()
+    #     # self.flow_in = pyunits.convert(self.flow_vol_in[time],
+    #     #     to_units=pyunits.m**3/pyunits.hr)
+    #     # self.cap_scaling_exp = 0.7
+    #     # self.cap_scaling_val = 4732 * (pyunits.m**3/pyunits.hour)
+    #     # self.number_of_units = 6
+    #     # self.filter_surf_area = 580 * pyunits.m ** 2
+    #     # self.filter_surf_area = pyunits.convert(self.filter_surf_area,
+    #     #     to_units=pyunits.ft ** 2)
+    #     self.air_water_ratio = 0.001 * pyunits.dimensionless
+    #     self.air_flow_rate = self.air_water_ratio * self.cap_scaling_val
+    #     # self.air_blower_cap =
+
+    #     dual_media_filter_cap =  +  * self.filter_surf_area
+    #     filter_backwash_cap =  +  * self.filter_surf_area
+    #     total_cap_cost = (((self.air_blower_cap + filter_backwash_cap + (dual_media_filter_cap * self.number_of_units))) * self.tpec_tic) * 1E-6
+    #     cap_scaling_factor = self.flow_in / self.cap_scaling_val
+    #     fe_mn_cap = total_cap_cost * cap_scaling_factor ** self.cap_scaling_exp
+    #     return fe_mn_cap
+
+    # def elect(self):
+    #     self.blower_power = 147.8 * (pyunits.hp / (pyunits.m**3/pyunits.hour)) * self.air_flow_rate
+    #     self.blower_power = pyunits.convert(self.blower_power,
+    #         to_units=pyunits.kilowatt)
+    #     electricity = self.blower_power / self.flow_in
+    #     return electricity
+
+    # def get_costing(self):
+    #     '''
+    #     Initialize the unit in WaterTAP3.
+    #     '''
+    #     basis_year = 2014
+    #     tpec_tic = 'TPEC'
+    #     self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
+    #             doc='Unadjusted fixed capital investment')
+    #     self.electricity = Expression(expr=self.elect(),
+    #             doc='Electricity intensity [kWh/m3]')
+    #     financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)

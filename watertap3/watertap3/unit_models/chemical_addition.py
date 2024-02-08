@@ -1,7 +1,7 @@
 import pandas as pd
 from pyomo.environ import Var, Expression, units as pyunits
 from watertap3.utils import financials
-from watertap3.core.wt3_unit import WT3UnitProcessPT
+from watertap3.core.wt3_unit_sido import WT3UnitProcessPT
 
 
 module_name = 'chemical_addition'
