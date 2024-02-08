@@ -7,6 +7,7 @@ from idaes.core.base.costing_base import (
     UnitModelCostingBlockData,
     register_idaes_currency_units,
 )
+from watertap.costing.costing_base import WaterTAPCostingBlockData
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 case_study_TEA_basis_file = (
@@ -27,7 +28,8 @@ plant_costs_indices_file = (
 
 
 @declare_process_block_class("WT3Costing")
-class WT3CostingData(FlowsheetCostingBlockData):
+class WT3CostingData(WaterTAPCostingBlockData):
+# class WT3CostingData(FlowsheetCostingBlockData):
     def build_global_params(self):
         register_idaes_currency_units()
         case_study = self.parent_block().train["case_study"]
@@ -54,6 +56,7 @@ class WT3CostingData(FlowsheetCostingBlockData):
             "analysis_year",
             "debt_interest_rate",
             "plant_cap_utilization",
+            # "total_investment_factor"
         ]
 
         self.location = (
@@ -75,9 +78,74 @@ class WT3CostingData(FlowsheetCostingBlockData):
                 doc=f"Cost basis parameter: {bp.replace('_', ' ').title()}",
             )
             self.add_component(bp, v)
+        
+        self.total_investment_factor = Var(initialize=1)
 
+        self.capital_recovery_factor = Expression(expr=(self.debt_interest_rate * (1 + self.debt_interest_rate) ** self.plant_life_yrs) / (((1 + self.debt_interest_rate)** self.plant_life_yrs) - 1))
+
+        # b.capital_recovery_factor = (wacc * (1 + wacc) ** sys_specs.plant_lifetime_yrs) / (
+        #         ((1 + wacc) ** sys_specs.plant_lifetime_yrs) - 1)
+
+        self.TPEC = Var(
+            initialize=3.4,
+            units=pyunits.dimensionless,
+            doc=f"Total purchase equipment cost factor (TPEC)",
+        )
+        self.TIC = Var(
+            initialize=1.65,
+            units=pyunits.dimensionless,
+            doc=f"Total installed cost factor (TIC)",
+        )
         self.fix_all_vars()
+
+
+    def build_process_costs(self):
+        # add total_captial_cost and total_operating_cost
+        self._build_common_process_costs()
+
+        self.total_capital_cost_constraint = Constraint(
+            expr=self.total_capital_cost
+            == self.total_investment_factor * self.aggregate_capital_cost
+        )
+
+        # self.maintenance_labor_chemical_operating_cost = Expression(
+        #     expr=self.factor_maintenance_labor_chemical * self.aggregate_capital_cost,
+        #     doc="Maintenance-labor-chemical operating cost",
+        # )
+
+        self.total_fixed_operating_cost = Expression(
+            expr=self.aggregate_fixed_operating_cost,
+            # + self.maintenance_labor_chemical_operating_cost,
+            doc="Total fixed operating costs",
+        )
+
+        self.total_variable_operating_cost = Expression(
+            expr=(
+                self.aggregate_variable_operating_cost
+                + sum(self.aggregate_flow_costs[f] for f in self.used_flows)
+                * self.plant_cap_utilization
+            )
+            if self.used_flows
+            else self.aggregate_variable_operating_cost,
+            doc="Total variable operating cost of process per operating period",
+        )
+
+        self.total_operating_cost_constraint = Constraint(
+            expr=self.total_operating_cost
+            == (self.total_fixed_operating_cost + self.total_variable_operating_cost),
+            doc="Total operating cost of process per operating period",
+        )
+
+        self.total_annualized_cost = Expression(
+            expr=(
+                self.total_capital_cost * self.capital_recovery_factor
+                + self.total_operating_cost
+            ),
+            doc="Total annualized cost of operation",
+        )
 
 @declare_process_block_class("WT3UnitCosting")
 class WT3UnitCostingData(UnitModelCostingBlockData):
-    pass
+    
+    def build(self):
+        super().build()
