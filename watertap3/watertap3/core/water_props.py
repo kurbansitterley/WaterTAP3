@@ -10,6 +10,7 @@ from idaes.core.base.components import Solute, Solvent
 from idaes.core.base.phases import LiquidPhase, AqueousPhase
 from pyomo.environ import Set, units as pyunits
 from pyomo.common.config import ConfigValue, In, Bool
+from idaes.core.util.constants import Constants
 
 # from . import generate_constituent_list
 import pandas as pd
@@ -76,21 +77,29 @@ class WT3ParameterBlockData(PhysicalParameterBlock):
         self._state_block_class = WT3StateBlock
 
         self.Liq = LiquidPhase()
-        self.component_list = Set(dimen=1)
+        self.H2O = Solvent()
+        # self.component_list = Set(dimen=1)
         # train_constituent_list = self.generate_constituent_list()
         # self.generate_constituent_list()
         # self.train_constituent_list = ["tds", "toc"]
 
-        for constituent_name in self.config.constituent_list:
+        for j in self.config.constituent_list:
             # self.component_list.add(constituent_name)
-            self.add_component(constituent_name, Solute())
+            self.add_component(str(j), Solute())
             # setattr(self, constituent_name, Component())
 
         self.dens_mass = Param(
             initialize=1000,
             units=pyunits.kg / pyunits.m**3,
             mutable=True,
-            doc="Mass density of flow",
+            doc="Mass density of pure water",
+        )
+
+        self.dens_mass_sw = Param(
+            initialize=1030,
+            units=pyunits.kg / pyunits.m**3,
+            mutable=True,
+            doc="Mass density of seawater",
         )
 
         self.visc_d = Param(
@@ -100,28 +109,18 @@ class WT3ParameterBlockData(PhysicalParameterBlock):
             doc="Dynamic viscosity of solution",
         )
 
-        self.set_default_scaling("temperature", 1e-3)
-        self.set_default_scaling("pressure", 1e-5)
+        self.mw_sw = Param(
+            initialize=58.4e-3,  # molecular weight of NaCl
+            units=pyunits.kg / pyunits.mol,
+            mutable=True,
+            doc="Molecular weight of seawater",
+        )
+
+        # self.set_default_scaling("temperature", 1e-3)
+        # self.set_default_scaling("pressure", 1e-5)
+        self.set_default_scaling("pressure_osmotic", 1e-5)
         self.set_default_scaling("dens_mass", 1e-3)
         self.set_default_scaling("visc_d", 1e3)
-
-    def generate_constituent_list(self):
-        train = self.parent_block().train
-        # getting the list of consituents with removal factors that are bigger than 0
-        df = pd.read_csv(crf_file)
-        df.case_study = np.where(
-            df.case_study == "default", train["case_study"], df.case_study
-        )
-        df = df[df.reference == train["reference"]]
-        df = df[df.case_study == train["case_study"]]
-        df = df[df.scenario == "baseline"]
-        list1 = df[df.value >= 0].constituent.unique()
-        list2 = self.parent_block().source_df.index.unique().to_list()
-
-        self.parent_block().source_constituents = source_constituents = [
-            x for x in list1 if x in list2
-        ]
-        self.train_constituent_list = source_constituents
 
     @classmethod
     def define_metadata(cls, obj):
@@ -139,8 +138,10 @@ class WT3ParameterBlockData(PhysicalParameterBlock):
                 "flow_vol": {"method": None},
                 "conc_mass_comp": {"method": None},
                 "flow_mass_comp": {"method": "_flow_mass_comp"},
+                "mass_frac_comp": {"method": "_mass_frac_comp"},
                 "temperature": {"method": "_temperature"},
                 "pressure": {"method": "_pressure"},
+                "pressure_osmotic": {"method": "_pressure_osmotic"},
                 "dens_mass": {"method": "_dens_mass"},
                 "visc_d": {"method": "_visc_d"},
             }
@@ -243,17 +244,17 @@ class _WT3StateBlock(StateBlock):
             if number_unfixed_variables(self[k]) != 0:
                 skip_solve = False
 
-        if not skip_solve:
-            # Initialize properties
-            with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-                results = solve_indexed_blocks(opt, [self], tee=slc.tee)
-                if not check_optimal_termination(results):
-                    raise InitializationError(
-                        "The property package failed to solve during initialization."
-                    )
-            init_log.info_high(
-                "Property initialization: {}.".format(idaeslog.condition(results))
-            )
+        # if not skip_solve:
+        #     # Initialize properties
+        #     with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+        #         results = solve_indexed_blocks(opt, [self], tee=slc.tee)
+        #         if not check_optimal_termination(results):
+        #             raise InitializationError(
+        #                 "The property package failed to solve during initialization."
+        #             )
+        #     init_log.info_high(
+        #         "Property initialization: {}.".format(idaeslog.condition(results))
+        #     )
 
         # ---------------------------------------------------------------------
         # If input block, return flags, else release state
@@ -300,16 +301,16 @@ class WT3StateBlockData(StateBlockData):
         self.flow_vol = Var(
             initialize=1,
             domain=PositiveReals,
-            doc="Volumetric flow rate",
             units=pyunits.m**3 / pyunits.s,
+            doc="Volumetric flow rate",
         )
 
         self.conc_mass_comp = Var(
             self.params.solute_set,
             initialize=1,
             domain=PositiveReals,
-            doc="Mass concentration of each solute",
             units=pyunits.kg / pyunits.m**3,
+            doc="Mass concentration of each solute",
         )
 
     # Other properties
@@ -317,7 +318,7 @@ class WT3StateBlockData(StateBlockData):
 
         self.flow_mass_comp = Var(
             self.params.component_list,
-            initialize=1,
+            initialize=1e2,
             domain=PositiveReals,
             doc="Mass flowrate of each component",
             units=pyunits.kg / pyunits.s,
@@ -344,10 +345,88 @@ class WT3StateBlockData(StateBlockData):
     def _pressure(self):
         self.pressure = Var(
             initialize=101325,
-            bounds=(1e5, None),
+            bounds=(1e4, 8e6),
             units=pyunits.Pa,
             doc="Pressure",
         )
+
+    def _mass_frac_comp(self):
+
+        self.mass_frac_comp = Var(
+            self.params.component_list,
+            initialize=0.5,
+            bounds=(0, 1),
+            units=pyunits.dimensionless,
+            doc="Mass fraction",
+        )
+
+        def rule_mass_frac_comp(b, j):
+            return b.mass_frac_comp[j] == b.flow_mass_comp[j] / sum(
+                b.flow_mass_comp[j] for j in self.params.component_list
+            )
+
+        self.eq_mass_frac_comp = Constraint(
+            self.params.component_list, rule=rule_mass_frac_comp
+        )
+
+    def _pressure_osmotic(self):
+        self.pressure_osmotic = Var(
+            initialize=1e6,
+            bounds=(5e2, 5e7),
+            units=pyunits.Pa,
+            doc="Osmotic pressure",
+        )
+
+        self.osmotic_coefficient = Var(
+            initialize=1,
+            bounds=(0, None),
+            units=pyunits.dimensionless,
+            doc="Osmotic coefficient",
+        )
+
+        self.osmotic_coeff_eq_A = Param(
+            initialize=4.92,
+            units=pyunits.dimensionless,
+            doc="Osmotic coefficient relationship - A parameter",
+        )
+        self.osmotic_coeff_eq_B = Param(
+            initialize=0.0889,
+            units=pyunits.dimensionless,
+            doc="Osmotic coefficient relationship - B parameter",
+        )
+        self.osmotic_coeff_eq_intercept = Param(
+            initialize=0.918,
+            units=pyunits.dimensionless,
+            doc="Osmotic coefficient relationship - intercept",
+        )
+
+        def rule_osmotic_coefficient(b):
+            return (
+                b.osmotic_coefficient
+                == b.osmotic_coeff_eq_A * b.mass_frac_comp["tds"] ** 2
+                + b.osmotic_coeff_eq_B * b.mass_frac_comp["tds"]
+                + b.osmotic_coeff_eq_intercept
+            )
+
+        self.eq_osmotic_coefficient = Constraint(rule=rule_osmotic_coefficient)
+
+        def rule_osmotic_pressure(b):
+            num_ions = 2
+            molality_tds = (
+                b.mass_frac_comp["tds"] / (1 - b.mass_frac_comp["tds"])
+            ) / b.params.mw_sw
+            temp = 293*pyunits.degK
+            return b.pressure_osmotic == pyunits.convert(
+                num_ions
+                * b.osmotic_coefficient
+                * molality_tds
+                * b.params.dens_mass
+                * Constants.gas_constant
+                * temp,
+                to_units=pyunits.Pa,
+            )
+
+        self.eq_osmotic_pressure = Constraint(rule=rule_osmotic_pressure)
 
     def _dens_mass(self):
         add_object_reference(self, "dens_mass", self.params.dens_mass)
@@ -383,7 +462,7 @@ class WT3StateBlockData(StateBlockData):
         return {
             "Volumetric Flowrate": self.flow_vol,
             "Mass Concentration": self.conc_mass_comp,
-            "Temperature": self.temperature,
+            # "Temperature": self.temperature,
         }
 
     # def get_material_flow_basis(self):
@@ -403,9 +482,7 @@ class WT3StateBlockData(StateBlockData):
                 try:
                     sf_c = self.params.default_scaling_factor[("conc_mass_comp", j)]
                 except KeyError:
-                    iscale.set_scaling_factor(
-                        self.conc_mass_comp[j], default=1, warning=True
-                    )
+                    iscale.set_scaling_factor(self.conc_mass_comp[j], 10)
 
         if self.is_property_constructed("flow_mass_comp"):
             for j, v in self.flow_mass_comp.items():

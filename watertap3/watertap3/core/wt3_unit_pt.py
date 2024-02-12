@@ -4,12 +4,15 @@
 # All rights reserved."
 import idaes.logger as idaeslog
 from idaes.core import declare_process_block_class
-from pyomo.environ import Var, units as pyunits
+from idaes.core.solvers.get_solver import get_solver
+from idaes.core.util.exceptions import InitializationError
+from pyomo.environ import check_optimal_termination, Var, units as pyunits
 from pyomo.network import Port
 from .wt3_unit_base import WT3UnitProcessBaseData
 
 __all__ = ["WT3UnitProcessPT"]
 
+solver = get_solver()
 
 @declare_process_block_class("WT3UnitProcessPT")
 class WT3UnitProcessPTData(WT3UnitProcessBaseData):
@@ -33,40 +36,123 @@ class WT3UnitProcessPTData(WT3UnitProcessBaseData):
             doc="Material properties of outlet stream", **tmp_dict
         )
 
-        self.deltaP = Var(
-            initialize=0,
-            units=units_meta("pressure"),
-            doc="Pressure change between inlet and outlet",
-        )
+        # self.deltaP = Var(
+        #     initialize=0,
+        #     units=units_meta("pressure"),
+        #     doc="Pressure change between inlet and outlet",
+        # )
+        # self.deltaP.fix(0)
 
-        self.deltaP.fix(0)
-
-        @self.Constraint(doc="Pressure balance")
-        def pressure_balance(b):
-            return prop_in.pressure + b.deltaP == prop_out.pressure
+        # @self.Constraint(doc="Pressure balance")
+        # def pressure_balance(b):
+        #     return prop_in.pressure + b.deltaP == prop_out.pressure
 
         @self.Constraint(doc="Overall flow balance")
         def flow_balance(b):
             return prop_in.flow_vol == prop_out.flow_vol
 
         @self.Constraint(
-            self.config.property_package.component_list, doc="Component mass balances"
+            self.config.property_package.solute_set, doc="Component mass balances"
         )
+        # def component_mass_balance(b, j):
+        #     return prop_in.flow_vol * prop_in.conc_mass_comp[j] == prop_out.flow_vol * prop_out.conc_mass_comp[j]
         def component_mass_balance(b, j):
             return prop_in.flow_mass_comp[j] == prop_out.flow_mass_comp[j]
 
-        @self.Constraint(doc="Outlet temperature equation")
-        def isothermal(b):
-            return prop_in.temperature == prop_out.temperature
+        # @self.Constraint(doc="Outlet temperature equation")
+        # def isothermal(b):
+        #     return prop_in.temperature == prop_out.temperature
         
         self.inlet = Port(noruleinit=True, doc='Inlet Port')
         self.inlet.add(prop_in.flow_vol, 'flow_vol')
         self.inlet.add(prop_in.conc_mass_comp, 'conc_mass')
-        self.inlet.add(prop_in.temperature, 'temperature')
-        self.inlet.add(prop_in.pressure, 'pressure')
+        # self.inlet.add(prop_in.temperature, 'temperature')
+        # self.inlet.add(prop_in.pressure, 'pressure')
+        # self.inlet.add(prop_in.flow_mass_comp, 'flow_mass_comp')
 
         self.outlet = Port(noruleinit=True, doc='Outlet Port')
         self.outlet.add(prop_out.flow_vol, 'flow_vol')
         self.outlet.add(prop_out.conc_mass_comp, 'conc_mass')
-        self.outlet.add(prop_out.temperature, 'temperature')
-        self.outlet.add(prop_out.pressure, 'pressure')
+        # self.outlet.add(prop_out.temperature, 'temperature')
+        # self.outlet.add(prop_out.pressure, 'pressure')
+        # self.outlet.add(prop_out.flow_mass_comp, 'flow_mass_comp')
+
+    def initialize_build(
+        self,
+        state_args=None,
+        outlvl=idaeslog.NOTSET,
+        solver=None,
+        optarg=None,
+    ):
+        """
+        General wrapper for initialization routines
+
+        Keyword Arguments:
+            state_args : a dict of arguments to be passed to the property
+                         package(s) to provide an initial state for
+                         initialization (see documentation of the specific
+                         property package) (default = {}).
+            outlvl : sets output level of initialization routine
+            optarg : solver options dictionary object (default=None)
+            solver : str indicating which solver to use during
+                     initialization (default = None)
+
+        Returns: None
+        """
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
+
+        if solver is None:
+            opt = get_solver(solver, optarg)
+
+        # ---------------------------------------------------------------------
+        flags = self.properties_in.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args,
+            hold_state=True,
+        )
+        init_log.info("Initialization Step 1a Complete.")
+
+        # ---------------------------------------------------------------------
+        # Initialize other state blocks
+        # Set state_args from inlet state
+        if state_args is None:
+            self.state_args = state_args = {}
+            state_dict = self.properties_in.define_port_members()
+
+
+            for k in state_dict.keys():
+                if state_dict[k].is_indexed():
+                    state_args[k] = {}
+                    for m in state_dict[k].keys():
+                        state_args[k][m] = state_dict[k][m].value
+                else:
+                    state_args[k] = state_dict[k].value
+
+        self.properties_out.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args,
+        )
+        init_log.info("Initialization Step 1b Complete.")
+
+        # Solve unit
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = opt.solve(self, tee=slc.tee)
+            if not check_optimal_termination(res):
+                init_log.warning(
+                    f"Trouble solving unit model {self.name}, trying one more time"
+                )
+                res = opt.solve(self, tee=slc.tee)
+
+        init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
+
+        # Release Inlet state
+        self.properties_in.release_state(flags, outlvl=outlvl)
+        init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
+
+        if not check_optimal_termination(res):
+            raise InitializationError(f"Unit model {self.name} failed to initialize.")

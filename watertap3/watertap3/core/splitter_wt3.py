@@ -125,11 +125,11 @@ class SplitterProcessData(UnitModelBlockData):
 
             tmp_port.add(tmp_prop.conc_mass_comp, "conc_mass")
             tmp_port.add(tmp_prop.flow_vol, "flow_vol")
-            tmp_port.add(tmp_prop.temperature, "temperature")
-            tmp_port.add(tmp_prop.pressure, "pressure")
+            # tmp_port.add(tmp_prop.temperature, "temperature")
+            # tmp_port.add(tmp_prop.pressure, "pressure")
 
             @tmp_prop.Constraint(
-                self.config.property_package.component_list,
+                self.config.property_package.solute_set,
                 doc=f"Component balance for {outlet}",
             )
             def component_mass_balance(b, j):
