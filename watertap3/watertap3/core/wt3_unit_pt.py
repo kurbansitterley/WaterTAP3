@@ -12,6 +12,8 @@ from .wt3_unit_base import WT3UnitProcessBaseData
 
 __all__ = ["WT3UnitProcessPT"]
 
+__author__ = "Kurban Sitterley"
+
 solver = get_solver()
 
 @declare_process_block_class("WT3UnitProcessPT")
@@ -36,17 +38,6 @@ class WT3UnitProcessPTData(WT3UnitProcessBaseData):
             doc="Material properties of outlet stream", **tmp_dict
         )
 
-        # self.deltaP = Var(
-        #     initialize=0,
-        #     units=units_meta("pressure"),
-        #     doc="Pressure change between inlet and outlet",
-        # )
-        # self.deltaP.fix(0)
-
-        # @self.Constraint(doc="Pressure balance")
-        # def pressure_balance(b):
-        #     return prop_in.pressure + b.deltaP == prop_out.pressure
-
         @self.Constraint(doc="Overall flow balance")
         def flow_balance(b):
             return prop_in.flow_vol == prop_out.flow_vol
@@ -54,28 +45,20 @@ class WT3UnitProcessPTData(WT3UnitProcessBaseData):
         @self.Constraint(
             self.config.property_package.solute_set, doc="Component mass balances"
         )
-        # def component_mass_balance(b, j):
-        #     return prop_in.flow_vol * prop_in.conc_mass_comp[j] == prop_out.flow_vol * prop_out.conc_mass_comp[j]
         def component_mass_balance(b, j):
             return prop_in.flow_mass_comp[j] == prop_out.flow_mass_comp[j]
-
-        # @self.Constraint(doc="Outlet temperature equation")
-        # def isothermal(b):
-        #     return prop_in.temperature == prop_out.temperature
         
         self.inlet = Port(noruleinit=True, doc='Inlet Port')
         self.inlet.add(prop_in.flow_vol, 'flow_vol')
         self.inlet.add(prop_in.conc_mass_comp, 'conc_mass')
         # self.inlet.add(prop_in.temperature, 'temperature')
         # self.inlet.add(prop_in.pressure, 'pressure')
-        # self.inlet.add(prop_in.flow_mass_comp, 'flow_mass_comp')
 
         self.outlet = Port(noruleinit=True, doc='Outlet Port')
         self.outlet.add(prop_out.flow_vol, 'flow_vol')
         self.outlet.add(prop_out.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop_out.temperature, 'temperature')
         # self.outlet.add(prop_out.pressure, 'pressure')
-        # self.outlet.add(prop_out.flow_mass_comp, 'flow_mass_comp')
 
     def initialize_build(
         self,

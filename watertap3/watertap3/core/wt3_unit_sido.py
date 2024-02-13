@@ -2,6 +2,7 @@
 # The Regents of the University of California, through Lawrence Berkeley National Laboratory,
 # National Technology & Engineering Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia University Research Corporation, et al.
 # All rights reserved."
+from copy import deepcopy
 import idaes.logger as idaeslog
 from idaes.core import declare_process_block_class
 from idaes.core.solvers.get_solver import get_solver
@@ -23,8 +24,6 @@ class WT3UnitProcessSIDOData(WT3UnitProcessBaseData):
     """
     def build(self):
         super().build()
-
-        units_meta = self.config.property_package.get_metadata().get_derived_units
 
         tmp_dict = dict(**self.config.property_package_args)
         tmp_dict["has_phase_equilibrium"] = False
@@ -94,13 +93,6 @@ class WT3UnitProcessSIDOData(WT3UnitProcessBaseData):
             doc="Component removal equation",
         )
         def component_removal_equation(b, j):
-            # if j == "H2O":
-                
-            #     return (
-            #         b.water_recovery * prop_in.flow_mass_comp[j]
-            #         == prop_waste.flow_mass_comp[j]
-            #     )
-            # else:
             return (
                 b.removal_fraction[j] * prop_in.flow_mass_comp[j]
                 == prop_waste.flow_mass_comp[j]
@@ -142,94 +134,108 @@ class WT3UnitProcessSIDOData(WT3UnitProcessBaseData):
         # self.waste.add(prop_waste.temperature, 'temperature')
         # self.waste.add(prop_waste.pressure, 'pressure')
 
-    # def initialize_build(
-    #     self,
-    #     state_args=None,
-    #     outlvl=idaeslog.NOTSET,
-    #     solver=None,
-    #     optarg=None,
-    # ):
-    #     """
-    #     General wrapper for initialization routines
+    def initialize_build(
+        self,
+        state_args=None,
+        outlvl=idaeslog.NOTSET,
+        solver=None,
+        optarg=None,
+    ):
+        """
+        General wrapper for initialization routines
 
-    #     Keyword Arguments:
-    #         state_args : a dict of arguments to be passed to the property
-    #                      package(s) to provide an initial state for
-    #                      initialization (see documentation of the specific
-    #                      property package) (default = {}).
-    #         outlvl : sets output level of initialization routine
-    #         optarg : solver options dictionary object (default=None)
-    #         solver : str indicating which solver to use during
-    #                  initialization (default = None)
+        Keyword Arguments:
+            state_args : a dict of arguments to be passed to the property
+                         package(s) to provide an initial state for
+                         initialization (see documentation of the specific
+                         property package) (default = {}).
+            outlvl : sets output level of initialization routine
+            optarg : solver options dictionary object (default=None)
+            solver : str indicating which solver to use during
+                     initialization (default = None)
 
-    #     Returns: None
-    #     """
-    #     init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
-    #     solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
+        Returns: None
+        """
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
 
-    #     if solver is None:
-    #         opt = get_solver(solver, optarg)
+        if solver is None:
+            opt = get_solver(solver, optarg)
 
-    #     # ---------------------------------------------------------------------
-    #     flags = self.properties_in.initialize(
-    #         outlvl=outlvl,
-    #         optarg=optarg,
-    #         solver=solver,
-    #         state_args=state_args,
-    #         hold_state=True,
-    #     )
-    #     init_log.info("Initialization Step 1a Complete.")
+        # ---------------------------------------------------------------------
+        flags = self.properties_in.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args,
+            hold_state=True,
+        )
+        init_log.info("Initialization Step 1a Complete.")
 
-    #     # ---------------------------------------------------------------------
-    #     # Initialize other state blocks
-    #     # Set state_args from inlet state
-    #     if state_args is None:
-    #         self.state_args = state_args = {}
-    #         state_dict = self.properties_in.define_port_members()
+        # ---------------------------------------------------------------------
+        # Initialize other state blocks
+        # Set state_args from inlet state
+        if state_args is None:
+            self.state_args = state_args = {}
+            state_dict = self.properties_in.define_port_members()
 
+            for k in state_dict.keys():
+                if state_dict[k].is_indexed():
+                    state_args[k] = {}
+                    for m in state_dict[k].keys():
+                        state_args[k][m] = state_dict[k][m].value
+                else:
+                    state_args[k] = state_dict[k].value
 
-    #         for k in state_dict.keys():
-    #             if state_dict[k].is_indexed():
-    #                 state_args[k] = {}
-    #                 for m in state_dict[k].keys():
-    #                     state_args[k][m] = state_dict[k][m].value
-    #             else:
-    #                 state_args[k] = state_dict[k].value
+        self.state_args_out = state_args_out = deepcopy(state_args)
+        for k, v  in state_args.items():
+            if k == "flow_vol":
+                state_args_out[k] == v * self.water_recovery.value
+            elif k == "conc_mass_comp":
+                state_args_out[k] == dict()
+                for j, u in v.items():
+                    state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
 
-    #     self.state_args_out = state_args_out = dict()
-    #     for k, v  in state_args.items():
-    #         if k == "flow_vol":
-    #             state_args_out[k] == v
-    #         elif k == "conc_mass_comp":
-    #         # elif isinstance(v, dict):
-    #             state_args_out[k] == dict()
-    #             for j, u in v.items():
-    #                 state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
+        self.properties_out.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args_out,
+        )
+        init_log.info("Initialization Step 1b Complete.")
+
+        self.state_args_waste = state_args_waste = deepcopy(state_args_out)
+        for k, v  in state_args.items():
+            if k == "flow_vol":
+                state_args_waste[k] == v * (1 - self.water_recovery.value)
+            elif k == "conc_mass_comp":
+            # elif isinstance(v, dict):
+                state_args_waste[k] == dict()
+                for j, u in v.items():
+                    state_args_waste[k][j] = self.removal_fraction[j].value * u
+
+        self.properties_waste.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args_waste,
+        )
+        init_log.info("Initialization Step 1c Complete.")
         
+        # Solve unit
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = opt.solve(self, tee=slc.tee)
+            if not check_optimal_termination(res):
+                init_log.warning(
+                    f"Trouble solving unit model {self.name}, trying one more time"
+                )
+                res = opt.solve(self, tee=slc.tee)
 
+        init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
 
-    #     self.properties_out.initialize(
-    #         outlvl=outlvl,
-    #         optarg=optarg,
-    #         solver=solver,
-    #         state_args=state_args_out,
-    #     )
-    #     init_log.info("Initialization Step 1b Complete.")
+        # Release Inlet state
+        self.properties_in.release_state(flags, outlvl=outlvl)
+        init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
 
-    #     # Solve unit
-    #     with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-    #         res = opt.solve(self, tee=slc.tee)
-    #         if not check_optimal_termination(res):
-    #             init_log.warning(
-    #                 f"Trouble solving unit model {self.name}, trying one more time"
-    #             )
-    #             res = opt.solve(self, tee=slc.tee)
-
-    #     init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
-
-    #     # Release Inlet state
-    #     self.properties_in.release_state(flags, outlvl=outlvl)
-    #     init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
-
-    #     if not check_optimal_termination(res):
-    #         raise InitializationError(f"Unit model {self.name} failed to initialize.")
+        if not check_optimal_termination(res):
+            raise InitializationError(f"Unit model {self.name} failed to initialize.")
