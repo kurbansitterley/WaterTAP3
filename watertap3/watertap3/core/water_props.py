@@ -1,22 +1,28 @@
+
+
+import os
+from pyomo.environ import (
+    Param,
+    units as pyunits,
+    Var,
+    Constraint,
+    Suffix,
+    value,
+    check_optimal_termination,
+)
+from pyomo.common.config import ConfigValue
+
+
+import idaes.logger as idaeslog
 from idaes.core import (
     PhysicalParameterBlock,
     StateBlockData,
     StateBlock,
     declare_process_block_class,
 )
-
-# from idaes.core.components import Component
 from idaes.core.base.components import Solute, Solvent
-from idaes.core.base.phases import LiquidPhase, AqueousPhase
-from pyomo.environ import Set, units as pyunits
-from pyomo.common.config import ConfigValue, In, Bool
+from idaes.core.base.phases import LiquidPhase
 from idaes.core.util.constants import Constants
-
-# from . import generate_constituent_list
-import pandas as pd
-import numpy as np
-import os
-import idaes.logger as idaeslog
 from idaes.core.util.misc import add_object_reference
 import idaes.core.util.scaling as iscale
 from idaes.core.util.exceptions import InitializationError
@@ -30,24 +36,10 @@ from idaes.core.util.model_statistics import (
     degrees_of_freedom,
     number_unfixed_variables,
 )
-from pyomo.environ import (
-    Param,
-    PositiveReals,
-    units as pyunits,
-    Var,
-    Constraint,
-    Suffix,
-    value,
-    check_optimal_termination,
-)
 
 __all__ = ["WT3ParameterBlock", "WT3StateBlock"]
-__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-crf_file = (
-    os.path.abspath(os.path.join(__location__, os.pardir))
-    + "/data/constituent_removal_factors.csv"
-)
 
+__author__ = "Kurban Sitterley"
 
 @declare_process_block_class("WT3ParameterBlock")
 class WT3ParameterBlockData(PhysicalParameterBlock):
@@ -72,21 +64,13 @@ class WT3ParameterBlockData(PhysicalParameterBlock):
         """
         super().build()
 
-        # self.config.constituent_list += ["H2O"]
-
         self._state_block_class = WT3StateBlock
 
         self.Liq = LiquidPhase()
         self.H2O = Solvent()
-        # self.component_list = Set(dimen=1)
-        # train_constituent_list = self.generate_constituent_list()
-        # self.generate_constituent_list()
-        # self.train_constituent_list = ["tds", "toc"]
 
         for j in self.config.constituent_list:
-            # self.component_list.add(constituent_name)
             self.add_component(str(j), Solute())
-            # setattr(self, constituent_name, Component())
 
         self.dens_mass = Param(
             initialize=1000,
@@ -244,17 +228,17 @@ class _WT3StateBlock(StateBlock):
             if number_unfixed_variables(self[k]) != 0:
                 skip_solve = False
 
-        # if not skip_solve:
-        #     # Initialize properties
-        #     with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-        #         results = solve_indexed_blocks(opt, [self], tee=slc.tee)
-        #         if not check_optimal_termination(results):
-        #             raise InitializationError(
-        #                 "The property package failed to solve during initialization."
-        #             )
-        #     init_log.info_high(
-        #         "Property initialization: {}.".format(idaeslog.condition(results))
-        #     )
+        if not skip_solve:
+            # Initialize properties
+            with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+                results = solve_indexed_blocks(opt, [self], tee=slc.tee)
+                if not check_optimal_termination(results):
+                    raise InitializationError(
+                        "The property package failed to solve during initialization."
+                    )
+            init_log.info_high(
+                "Property initialization: {}.".format(idaeslog.condition(results))
+            )
 
         # ---------------------------------------------------------------------
         # If input block, return flags, else release state
@@ -296,11 +280,10 @@ class WT3StateBlockData(StateBlockData):
         super().build()
 
         self.scaling_factor = Suffix(direction=Suffix.EXPORT)
-        # self.H2O = Solvent()
 
         self.flow_vol = Var(
             initialize=1,
-            domain=PositiveReals,
+            bounds=(0, None),
             units=pyunits.m**3 / pyunits.s,
             doc="Volumetric flow rate",
         )
@@ -308,7 +291,7 @@ class WT3StateBlockData(StateBlockData):
         self.conc_mass_comp = Var(
             self.params.solute_set,
             initialize=1,
-            domain=PositiveReals,
+            bounds=(0, None),
             units=pyunits.kg / pyunits.m**3,
             doc="Mass concentration of each solute",
         )
@@ -319,7 +302,7 @@ class WT3StateBlockData(StateBlockData):
         self.flow_mass_comp = Var(
             self.params.component_list,
             initialize=1e2,
-            domain=PositiveReals,
+            bounds=(0, None),
             doc="Mass flowrate of each component",
             units=pyunits.kg / pyunits.s,
         )
