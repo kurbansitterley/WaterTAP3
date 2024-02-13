@@ -9,14 +9,10 @@
 """
 General purpose mixer block for IDAES models
 """
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-)  # disable implicit relative imports
 
 import logging
-
+import idaes.logger as idaeslog
+from pyomo.environ import check_optimal_termination, Var, units as pyunits
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
@@ -26,10 +22,11 @@ from idaes.core.util.exceptions import (
 from pyomo.network import Port
 from idaes.core.solvers.get_solver import get_solver
 
+__all__ = ["Mixer"]
 solver = get_solver()
+
 __author__ = "Kurban Sitterley"
 
-__all__ = ["Mixer"]
 # Set up logger
 _log = logging.getLogger(__name__)
 
@@ -156,17 +153,17 @@ linked to all inlet states and the mixed state,
                 ib.flow_mass_comp[j] for ib in b.inlet_blocks
             )
 
-        @self.Constraint(doc="Outlet temperature equation")
-        def isothermal(b):
-            return prop_out.temperature == sum(
-                ib.temperature for ib in b.inlet_blocks
-            ) / len(b.inlet_blocks)
+        # @self.Constraint(doc="Outlet temperature equation")
+        # def isothermal(b):
+        #     return prop_out.temperature == sum(
+        #         ib.temperature for ib in b.inlet_blocks
+        #     ) / len(b.inlet_blocks)
 
-        @self.Constraint(doc="Outlet pressure equation")
-        def isobaric(b):
-            return prop_out.pressure == sum(ib.pressure for ib in b.inlet_blocks) / len(
-                b.inlet_blocks
-            )
+        # @self.Constraint(doc="Outlet pressure equation")
+        # def isobaric(b):
+        #     return prop_out.pressure == sum(ib.pressure for ib in b.inlet_blocks) / len(
+        #         b.inlet_blocks
+        #     )
 
     def create_inlet_list(self):
         """
@@ -243,16 +240,16 @@ linked to all inlet states and the mixed state,
             for i, b in zip(self.inlet_list, self.inlet_blocks):
                 tmp_port = Port(noruleinit=True, doc=f"{i.title()} Port")
                 setattr(self, i, tmp_port)
-                tmp_port.add(b.pressure, "pressure")
-                tmp_port.add(b.temperature, "temperature")
+                # tmp_port.add(b.pressure, "pressure")
+                # tmp_port.add(b.temperature, "temperature")
                 tmp_port.add(b.conc_mass_comp, "conc_mass")
                 tmp_port.add(b.flow_vol, "flow_vol")
 
             self.outlet = Port(noruleinit=True, doc="Outlet Port")
             self.outlet.add(self.properties_out.flow_vol, "flow_vol")
             self.outlet.add(self.properties_out.conc_mass_comp, "conc_mass")
-            self.outlet.add(self.properties_out.temperature, "temperature")
-            self.outlet.add(self.properties_out.pressure, "pressure")
+            # self.outlet.add(self.properties_out.temperature, "temperature")
+            # self.outlet.add(self.properties_out.pressure, "pressure")
 
     def model_check(self):
         """
@@ -292,9 +289,16 @@ linked to all inlet states and the mixed state,
                     "StateBlock class.".format(self.name)
                 )
 
-    def initialize(self, optarg={}, solver=None, hold_state=False):
+    def initialize_build(
+        self,
+        state_args=None,
+        outlvl=idaeslog.NOTSET,
+        optarg={},
+        solver=None,
+        hold_state=True,
+    ):
         """
-        Initialisation routine for mixer (default solver ipopt)
+        Initialization routine for mixer (default solver ipopt)
 
         Keyword Arguments:
             optarg : solver options dictionary object (default={})
@@ -313,14 +317,62 @@ linked to all inlet states and the mixed state,
             If hold_states is True, returns a dict containing flags for which
             states were fixed during initialization.
         """
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
+
         if solver is None:
-            solver = get_solver()
+            opt = get_solver(solver, optarg)
 
         # Initialize inlet state blocks
-        flags = {}
+        self.state_dict = state_dict = self.properties_out.define_port_members()
+        self.flags = flags = {}
+        self.flow_vol_list = list()
+        self.state_args = state_args = dict(
+            flow_vol=0,
+            conc_mass_comp=dict(
+                zip(
+                    self.config.property_package.solute_set,
+                    [0] * len(self.config.property_package.solute_set),
+                )
+            ),
+        )
         for i, ib in zip(self.inlet_list, self.inlet_blocks):
-            flags[i] = {}
             flags[i] = ib.initialize(
-                optarg=optarg, solver=solver, hold_state=hold_state
+                outlvl=outlvl,
+                optarg=optarg,
+                solver=solver,
+                hold_state=True,
+                state_args=state_args,
             )
-        self.properties_out.initialize()
+            init_log.info(f"Initialization for {i} on {self.name} Complete.")
+            for k, v in state_dict.items():
+                if k == "conc_mass_comp" and v.is_indexed():
+                    for j in v.keys():
+                        # self.conc_mass_dict[j].append(ib.conc_mass_comp[j].value)
+                        self.state_args[k][j] += ib.conc_mass_comp[j].value
+                elif k == "flow_vol":
+                    self.state_args[k] += ib.flow_vol.value
+                else:
+                    pass
+
+        self.properties_out.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            hold_state=False,
+            state_args=self.state_args,
+        )
+        init_log.info(f"Initialization for outlet on {self.name} Complete.")
+        
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = opt.solve(self, tee=slc.tee)
+            if not check_optimal_termination(res):
+                init_log.warning(
+                    f"Trouble solving unit model {self.name}, trying one more time"
+                )
+                res = opt.solve(self, tee=slc.tee)
+
+        init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
+        for i, ib in zip(self.inlet_list, self.inlet_blocks):
+            ib.release_state(flags[i], outlvl=outlvl)
+        init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
