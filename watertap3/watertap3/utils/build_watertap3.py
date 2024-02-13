@@ -212,6 +212,7 @@ def watertap3_setup(
 
     m.fs.flow_in_dict = flow_dict
     x = generate_constituent_list(m)
+    # x += ["H2O"]
     m.fs.water = WT3ParameterBlock(constituent_list=x)
     m.fs.costing = WT3Costing()
 
@@ -223,46 +224,38 @@ def get_case_study(m, new_df_units=None, print_it=True):
     Function to add constituents and unit processes to flowsheet and connect
     all ports.
     """
-    # if new_df_units is not None:
-    #     m.fs.df_units = new_df_units
-    #     m.fs.pfd_dict = get_pfd_dict(new_df_units)
-    #     m.fs.new_case_study = True
-    # else:
+
     m.fs.pfd_dict = pfd_dict = get_pfd_dict(m.fs.df_units)
-    # m.fs.new_case_study = False
 
-    # pfd_dict = m.fs.pfd_dict
-    # financials.get_system_specs(m.fs)
-
-    if print_it:
-        print(
-            "\n=========================ADDING UNIT PROCESSES========================="
+    # if print_it:
+    print(
+        "\n=========================ADDING UNIT PROCESSES========================="
+    )
+    for unit_process_name in pfd_dict.keys():
+        unit = unit_process_name.replace("_", " ").swapcase()
+        unit_process_type = pfd_dict[unit_process_name]["Unit"]
+        unit_process_kind = pfd_dict[unit_process_name]["Type"]
+        print(f"{unit}")
+        m = add_unit_process(
+            m=m,
+            unit_process_name=unit_process_name,
+            unit_process_type=unit_process_type,
+            unit_process_kind=unit_process_kind,
         )
-        for unit_process_name in pfd_dict.keys():
-            unit = unit_process_name.replace("_", " ").swapcase()
-            unit_process_type = pfd_dict[unit_process_name]["Unit"]
-            unit_process_kind = pfd_dict[unit_process_name]["Type"]
-            print(f"{unit}")
-            m = add_unit_process(
-                m=m,
-                unit_process_name=unit_process_name,
-                unit_process_type=unit_process_type,
-                unit_process_kind=unit_process_kind,
-            )
-        print(
-            "=======================================================================\n"
-        )
-    else:
-        for unit_process_name in pfd_dict.keys():
-            unit = unit_process_name.replace("_", " ").swapcase()
-            unit_process_type = pfd_dict[unit_process_name]["Unit"]
-            unit_process_kind = pfd_dict[unit_process_name]["Type"]
-            m = add_unit_process(
-                m=m,
-                unit_process_name=unit_process_name,
-                unit_process_type=unit_process_type,
-                unit_process_kind=unit_process_kind,
-            )
+    print(
+        "=======================================================================\n"
+    )
+    # else:
+    #     for unit_process_name in pfd_dict.keys():
+    #         unit = unit_process_name.replace("_", " ").swapcase()
+    #         unit_process_type = pfd_dict[unit_process_name]["Unit"]
+    #         unit_process_kind = pfd_dict[unit_process_name]["Type"]
+    #         m = add_unit_process(
+    #             m=m,
+    #             unit_process_name=unit_process_name,
+    #             unit_process_type=unit_process_type,
+    #             unit_process_kind=unit_process_kind,
+    #         )
 
     # create a dictionary with all the arcs in the network based on the pfd_dict
     m, arc_dict, arc_i = create_arc_dict(m, pfd_dict, m.fs.flow_in_dict)
@@ -293,17 +286,19 @@ def add_unit_process(
     up_module = module_import.get_module(unit_process_type)
 
     unit_params = m.fs.pfd_dict[unit_process_name]["Parameter"]
+    if not isinstance(unit_params, dict):
+        unit_params = dict()
 
     if unit_process_type == "basic_unit":
         setattr(
-            m.fs, unit_process_name, up_module.UnitProcess(property_package=m.fs.water)
+            m.fs, unit_process_name, up_module.UnitProcess(property_package=m.fs.water, unit_params=unit_params)
         )
         basic_unit_name = unit_params["unit_process_name"]
         m = create_wt3_unit(m, basic_unit_name, unit_process_name)
 
     else:
         setattr(
-            m.fs, unit_process_name, up_module.UnitProcess(property_package=m.fs.water)
+            m.fs, unit_process_name, up_module.UnitProcess(property_package=m.fs.water, unit_params=unit_params)
         )
         # if not isinstance(getattr(m.fs, unit_process_name), WT3UnitProcessPT):
         m = create_wt3_unit(m, unit_process_type, unit_process_name)
@@ -315,11 +310,6 @@ def add_unit_process(
         unit_params = {}
     unit.unit_params = unit_params
     unit.costing = WT3UnitCosting(flowsheet_costing_block=m.fs.costing)
-    # unit.tpec_tic = Var(
-    #     bounds=(0, None),
-    #     initialize=1,
-    #     doc='Capital factor (TPEC or TIC)')
-    # unit.tpec_tic.fix(1)
 
     unit.unit_type = unit_process_type
     unit.unit_name = unit_process_name
@@ -342,8 +332,6 @@ def add_unit_process(
     )
     unit.unit_kind = unit_process_kind
 
-    # unit.get_costing()
-
     return m
 
 
@@ -355,17 +343,20 @@ def add_water_source(
     # getattr(m.fs, source_name).flow_vol_in.fix(flow)
     source = getattr(m.fs, source_name)
     source.properties.flow_vol.fix(flow)
+    source.properties.flow_mass_comp[...]
     temp_source_df = m.fs.source_df[m.fs.source_df.water_type == water_type].copy()
-    train_constituent_list = list(source.config.property_package.component_list)
+    train_constituent_list = list(source.config.property_package.solute_set)
     for constituent_name in train_constituent_list:
-        if constituent_name in temp_source_df.index:
+        # print(constituent_name)
+        if constituent_name == "H2O":
+            continue 
+            # source.properties.conc_mass_comp[constituent_name].set_value(1000)
+        elif constituent_name in temp_source_df.index:
             conc = temp_source_df.loc[constituent_name].value
             source.properties.conc_mass_comp[constituent_name].fix(conc)
         else:
             source.properties.conc_mass_comp[constituent_name].fix(0)
 
-    source.properties.pressure.fix(101325)
-    source.properties.temperature.fix(298)
     return m
 
 
@@ -455,16 +446,16 @@ def create_wt3_unit(m, unit_process_type, unit_process_name):
 
     if hasattr(unit, "removal_fraction"):
 
-        for constituent_name in unit.config.property_package.component_list:
+        for constituent_name in unit.config.property_package.solute_set:
 
             if constituent_name in train_constituent_removal_factors.keys():
                 unit.removal_fraction[constituent_name].fix(
                     train_constituent_removal_factors[constituent_name]
                 )
-            elif isinstance(unit, WT3UnitProcessSISOData):
-                unit.removal_fraction[constituent_name].fix(0)
+            # elif isinstance(unit, WT3UnitProcessSISOData):
+            #     unit.removal_fraction[constituent_name].fix(0)
             else:
-                unit.removal_fraction[constituent_name].fix(1e-5)
+                unit.removal_fraction[constituent_name].fix(0)
     return m
 
 
