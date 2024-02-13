@@ -9,12 +9,11 @@
 import idaes.logger as idaeslog
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.exceptions import InitializationError
-from pyomo.environ import check_optimal_termination, Var, units as pyunits
+from pyomo.environ import check_optimal_termination
 from pyomo.network import Port
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
 from pyomo.common.config import ConfigBlock, ConfigValue, In
-from .wt3_unit_pt import WT3UnitProcessPTData
 
 module_name = "source_wt3"
 
@@ -82,18 +81,12 @@ class SourceData(UnitModelBlockData):
         self.properties = prop = self.config.property_package.state_block_class(
             doc="Material properties of source", **tmp_dict
         )
-        # prop.flow_mass_comp[...]
-        # prop.temperature.fix()
-        # prop.pressure.fix()
-
-        # self.add_outlet_port(name="outlet", block=self.properties)
         
         self.outlet = Port(noruleinit=True, doc='Source Port')
         self.outlet.add(prop.flow_vol, 'flow_vol')
         self.outlet.add(prop.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop.temperature, 'temperature')
         # self.outlet.add(prop.pressure, 'pressure')
-        # self.outlet.add(prop.flow_mass_comp, 'flow_mass_comp')
 
 
     def initialize_build(
