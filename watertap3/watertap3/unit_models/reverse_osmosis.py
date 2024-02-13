@@ -1,50 +1,267 @@
+from copy import deepcopy
 from pyomo.environ import (
     Param,
-    Block,
-    Constraint,
-    Expression,
     NonNegativeReals,
     check_optimal_termination,
     Var,
     units as pyunits,
 )
-from copy import deepcopy
-from idaes.core.solvers.get_solver import get_solver
-from idaes.core import declare_process_block_class
-from watertap3.utils import financials
-from watertap3.core.wt3_unit_sido import WT3UnitProcessSIDOData
 from pyomo.network import Port
-import idaes.logger as idaeslog
 from pyomo.util.calc_var_value import calculate_variable_from_constraint as cvc
+
+import idaes.logger as idaeslog
+from idaes.core import declare_process_block_class
+from idaes.core.solvers.get_solver import get_solver
+
+from watertap.costing.util import make_capital_cost_var, make_fixed_operating_cost_var
+
+from watertap3.core.wt3_unit_sido import WT3UnitProcessSIDOData
 
 _log = idaeslog.getLogger(__name__)
 
 module_name = "reverse_osmosis"
 
+__author__ = "Kurban Sitterley"
+
+
 def cost_reverse_osmosis(blk):
 
-    blk.membrane_cost = Var(
-        initialize=40, bounds=(10, 80), domain=NonNegativeReals, doc="Membrane cost"
+    blk.basis_year = 2007
+    blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
+
+    blk.number_trains = Var(
+        initialize=2,
+        units=pyunits.dimensionless,
+        doc="Membrane cost",
+    )
+    blk.membrane_unit_cost = Var(
+        initialize=30,
+        bounds=(10, 80),
+        units=pyunits.USD_2018 / pyunits.m**2,
+        doc="Membrane cost",
+    )
+    blk.vessel_unit_cost = Var(
+        initialize=1000,
+        units=pyunits.USD_2018,
+        doc="Unit cost for pressure vessel",
+    )
+    blk.rack_unit_cost = Var(
+        initialize=33,
+        units=pyunits.USD_2018 / pyunits.ft,
+        doc="Unit cost for rack per length",
+    )
+    blk.number_vessels_per_area = Var(
+        initialize=0.025,
+        units=pyunits.m**-2,
+        doc="Number of pressure vessels per unit membrane area",
+    )
+    blk.rack_length_base = Var(
+        initialize=150,
+        units=pyunits.ft,
+        doc="Base length for racks",
+    )
+    blk.rack_length_additional = Var(
+        initialize=5,
+        units=pyunits.ft,
+        doc="Length required per additional vessel",
+    )
+    blk.factor_membrane_replacement = Var(
+        initialize=0.25,
+        bounds=(0.01, 1),
+        units=pyunits.year**-1,
+        doc="Membrane replacement rate",
     )
 
-    blk.factor_membrane_replacement = Var(
-        initialize=0.2,
-        domain=NonNegativeReals,
-        bounds=(0.01, 3),
-        doc="replacement rate membrane fraction",
+    blk.pump_capital_cost_base = Var(
+        initialize=1.908,  # 53 / 1e5 * 3600,
+        bounds=(1, 3),
+        units=pyunits.USD_2018,  # ($ * hr) / (m^3 * bar)
+        doc="Pump capital cost equation - base",
     )
-    blk.pressure_vessel_cost = Var(
-        # initialize=2e6,
-        bounds=(0, None),
-        doc="Pressure vessel cost",
+    blk.pump_capital_cost_exp = Var(
+        initialize=0.97,
+        bounds=(0, 1),
+        units=pyunits.dimensionless,
+        doc="Pump capital cost equation - exponent",
     )
-    blk.rack_support_cost = Var(
-        # initialize=1e6,
-        bounds=(0, None),
-        doc="Rack support cost",
+    blk.pump_efficiency = Var(
+        initialize=0.8,
+        bounds=(0, 1),
+        units=pyunits.dimensionless,
+        doc="Pump efficiency",
+    )
+
+    blk.erd_capital_cost_base = Var(
+        initialize=3134.7,
+        units=pyunits.USD_2018,
+        doc="ERD capital cost equation - base",
+    )
+    blk.erd_capital_cost_exp = Var(
+        initialize=0.58,
+        bounds=(0, 1),
+        units=pyunits.dimensionless,
+        doc="ERD capital cost equation - exponent",
+    )
+    blk.erd_efficiency = Var(
+        initialize=0.8,
+        bounds=(0, 1),
+        units=pyunits.dimensionless,
+        doc="Energy recovery device efficiency",
     )
 
     blk.fix_all_vars()
+    make_fixed_operating_cost_var(blk)
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, "TIC")
+    blk.pressure_vessel_capital_cost = Var(
+        initialize=1e6,
+        bounds=(0, None),
+        units=pyunits.USD_2018,
+        doc="Pressure vessel cost",
+    )
+    blk.rack_support_capital_cost = Var(
+        initialize=1e6,
+        bounds=(0, None),
+        units=pyunits.USD_2018,
+        doc="Rack support cost",
+    )
+    blk.pump_capital_cost = Var(
+        initialize=1e5,
+        bounds=(0, None),
+        units=pyunits.USD_2018,
+        doc="Pump capital cost",
+    )
+    blk.erd_capital_cost = Var(
+        initialize=1e5,
+        bounds=(0, None),
+        units=pyunits.USD_2018,
+        doc="Energy recovery device capital cost",
+    )
+    blk.membrane_capital_cost = Var(
+        initialize=1e5,
+        bounds=(0, None),
+        units=pyunits.USD_2018,
+        doc="Membrane capital cost",
+    )
+
+    @blk.Expression(doc="Number of pressure vessels per train")
+    def number_vessels(b):
+        return blk.unit_model.membrane_area * b.number_vessels_per_area
+
+    @blk.Expression(doc="Total length for rack support per train")
+    def rack_support_length(b):
+        return b.rack_length_base + b.number_vessels * b.rack_length_additional
+
+    @blk.Expression(doc="Total capital cost of pressure vessels and rack.")
+    def support_capital_cost(b):
+        return 3.3 * (b.pressure_vessel_capital_cost + b.rack_support_capital_cost)
+
+    @blk.Expression(doc="Pump power")
+    def pump_power(b):
+        return pyunits.convert(
+            (
+                (b.unit_model.properties_in.pressure - b.unit_model.pressure_atm)
+                * b.unit_model.properties_in.flow_vol
+            )
+            / b.pump_efficiency,
+            to_units=pyunits.watt,
+        )
+
+    if blk.unit_model.config.unit_params["erd"] is True:
+
+        @blk.Expression(doc="ERD power")
+        def erd_power(b):
+            return pyunits.convert(
+                (
+                    (b.unit_model.properties_waste.pressure - b.unit_model.pressure_atm)
+                    * b.unit_model.properties_waste.flow_vol
+                )
+                / b.erd_efficiency,
+                to_units=pyunits.watt,
+            )
+
+        @blk.Constraint(doc="ERD capital cost equation")
+        def erd_capital_cost_constraint(b):
+            flow_mass_waste = pyunits.convert(
+                b.unit_model.properties_waste.flow_mass_comp["tds"]
+                + b.unit_model.properties_waste.flow_mass_comp["H2O"],
+                to_units=pyunits.kg / pyunits.hr,
+            )
+            flow_mass_waste_dim = pyunits.convert(
+                flow_mass_waste * pyunits.hr / pyunits.kg,
+                to_units=pyunits.dimensionless,
+            )
+            return (
+                b.erd_capital_cost
+                == b.erd_capital_cost_base
+                * flow_mass_waste_dim**b.erd_capital_cost_exp
+            )
+
+    else:
+
+        @blk.Expression(doc="ERD power")
+        def erd_power(b):
+            return 0 * pyunits.watt
+
+        blk.erd_capital_cost.fix(0)
+
+    @blk.Expression(doc="Total power required")
+    def power_required(b):
+        return b.pump_power - b.erd_power
+
+    @blk.Constraint(doc="Membrane capital cost equation")
+    def membrane_capital_cost_constraint(b):
+        return (
+            b.membrane_capital_cost == b.unit_model.membrane_area * b.membrane_unit_cost
+        )
+
+    @blk.Constraint(doc="Pump capital cost equation")
+    def pump_capital_cost_constraint(b):
+        pump_power_dim = pyunits.convert(
+            b.pump_power / pyunits.watt, to_units=pyunits.dimensionless
+        )
+        return (
+            b.pump_capital_cost
+            == b.pump_capital_cost_base * pump_power_dim**b.pump_capital_cost_exp
+        )
+
+    @blk.Constraint(doc="Pressure vessel capital cost equation")
+    def pressure_vessel_capital_cost_constraint(b):
+        return (
+            b.pressure_vessel_capital_cost
+            == b.number_vessels * b.vessel_unit_cost * b.number_trains
+        )
+
+    @blk.Constraint(doc="Rack capital cost equation")
+    def rack_support_capital_cost_constraint(b):
+        return (
+            b.rack_support_capital_cost
+            == b.rack_support_length * b.rack_unit_cost * b.number_trains
+        )
+
+    @blk.Constraint(doc="Capital cost equation")
+    def capital_cost_constraint(b):
+        return b.capital_cost == pyunits.convert(
+            b.pump_capital_cost
+            + b.membrane_capital_cost
+            + b.erd_capital_cost
+            + b.support_capital_cost,
+            to_units=b.costing_package.base_currency,
+        )
+
+    @blk.Constraint(doc="Fixed operating cost equation")
+    def fixed_operating_cost_constraint(b):
+        return b.fixed_operating_cost == pyunits.convert(
+            b.factor_membrane_replacement
+            * b.membrane_unit_cost
+            * b.unit_model.membrane_area,
+            to_units=blk.costing_package.base_currency
+            / blk.costing_package.base_period,
+        )
+
+    blk.costing_package.cost_flow(blk.power_required, "electricity")
+    # TODO: add chemical costing = 1% of capital costs
+    # self.chem_dict = {"unit_cost": 0.01}
 
 
 @declare_process_block_class("UnitProcess")
@@ -52,28 +269,6 @@ class UnitProcessData(WT3UnitProcessSIDOData):
     def build(self):
 
         super().build()
-        # self.del_component(self.properties_in)
-        # self.feed = Block()
-        # tmp_dict = dict(**self.config.property_package_args)
-        # tmp_dict["has_phase_equilibrium"] = False
-        # tmp_dict["parameters"] = self.config.property_package
-        # tmp_dict["defined_state"] = True
-        # self.feed.properties_in = prop_in = self.config.property_package.state_block_class(
-        #     doc="Material properties of inlet stream", **tmp_dict
-        # )
-        # self.inlet.remove("pressure")
-        # for arc in self.inlet.arcs():
-        #     for port in arc.ports:
-        #         port.remove("pressure")
-        # self.del_component(self.inlet)
-        # for port in self.component_objects(Port):
-        #     for arc in port.arcs():
-        #         for p in arc:
-        #             print(port, arc, p)
-        #             p.remove("pressure")
-        #             p.remove("flow_vol")
-        #             p.remove("conc_mass")
-
 
         self.pressure_atm = Param(
             initialize=101325,
@@ -81,6 +276,13 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             units=pyunits.Pa,
             doc="Atmospheric pressure",
         )
+
+        self.deltaP_waste = Param(
+            initialize=3e5,
+            units=pyunits.Pa,
+            doc="Pressure change between inlet and waste",
+        )
+
         self.module_membrane_area = Param(
             initialize=37.16,
             mutable=True,
@@ -102,35 +304,26 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             doc="Salt permeability",
         )
 
-        # self.water_permeability = Var(
-        #     initialize=4.2e-12,
-        #     bounds=(1e-12, 9e-12),
-        #     domain=NonNegativeReals,
-        #     units=pyunits.m / (pyunits.Pa * pyunits.s),
-        #     doc="Water permeability",
-        # )
+        self.target_water_recovery = Param(
+            initialize=0.5,
+            mutable=True,
+            units=pyunits.dimensionless,
+            doc="Target water recovery fraction",
+        )
 
-        # self.salt_permeability = Var(
-        #     initialize=3.5e-8,
-        #     bounds=(1e-8, 9e-8),
-        #     domain=NonNegativeReals,
-        #     units=pyunits.m / pyunits.s,
-        #     doc="Salt permeability",
-        # )
+        self.target_permeate_salinity = Param(
+            initialize=0.5,
+            mutable=True,
+            units=pyunits.kg / pyunits.m**3,
+            doc="Target permeate salinity",
+        )
+
         self.deltaP_outlet = Var(
             initialize=1e-6,
             units=pyunits.Pa,
             doc="Pressure change between inlet and outlet",
         )
 
-        # self.deltaP_outlet.fix(0)
-
-        self.deltaP_waste = Param(
-            initialize=3e5,
-            units=pyunits.Pa,
-            doc="Pressure change between inlet and waste",
-        )
-        # self.deltaP_waste.fix(0)
         self.membrane_area = Var(
             initialize=1e6,
             domain=NonNegativeReals,
@@ -139,25 +332,19 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             doc="Total membrane area",
         )
 
-        # self.pressure_operating = Var(
-        #     initialize=100,
-        #     domain=NonNegativeReals,
-        #     bounds=(0, None),
-        #     units=pyunits.Pa,
-        #     doc="Total membrane area",
-        # )
-        # self.deltaP_outlet.unfix()
-        # self.deltaP_waste.fix(3e6)
-
         @self.Expression(doc="Number membrane modules needed")
         def number_modules(b):
             return b.membrane_area / b.module_membrane_area
-        
+
         @self.Expression(doc="")
         def operating_pressure(b):
+            return (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
+
+        @self.Expression(doc="")
+        def avg_osmotic_pressure(b):
             return (
-                (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
-            ) 
+                b.properties_in.pressure_osmotic + b.properties_waste.pressure_osmotic
+            ) * 0.5 - b.properties_out.pressure_osmotic
 
         @self.Constraint(doc="Permeate pressure")
         def eq_permeate_pressure(b):
@@ -165,22 +352,14 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         @self.Constraint(doc="Water transport equation")
         def eq_water_transport(b):
-            avg_osm_pressure = (
-                b.properties_in.pressure_osmotic + b.properties_waste.pressure_osmotic
-            ) * 0.5
-            # b.avg_pressure_in = 
-            # avg_pressure_in = (
-            #     (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
-            # ) 
             return (
                 b.properties_out.flow_mass_comp["H2O"]
                 == b.properties_in.dens_mass
                 * b.water_permeability
-                * (b.operating_pressure - avg_osm_pressure)
+                * (b.operating_pressure - b.avg_osmotic_pressure)
                 * b.membrane_area
             )
 
-        
         @self.Constraint(doc="Salt transport equation")
         def eq_salt_transport(b):
             return (
@@ -195,117 +374,33 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         @self.Constraint(doc="Pressure of brine stream")
         def eq_pressure_waste(b):
-            return b.properties_waste.pressure == b.properties_in.pressure + b.deltaP_waste
-        
+            return (
+                b.properties_waste.pressure == b.properties_in.pressure + b.deltaP_waste
+            )
+
         @self.Constraint(doc="Pressure of perm stream")
         def eq_pressure_permeate(b):
-            return b.properties_out.pressure == b.properties_in.pressure + b.deltaP_outlet
-        
-        @self.Constraint()
-        def eq_min_pressure(b):
+            return (
+                b.properties_out.pressure == b.properties_in.pressure + b.deltaP_outlet
+            )
+
+        @self.Constraint(doc="Inlet pressure must be greater than osmotic")
+        def eq_min_pressure_inlet(b):
             return b.properties_in.pressure >= b.properties_in.pressure_osmotic
-        @self.Constraint()
+
+        @self.Constraint(doc="Outlet pressure must be greater than osmotic")
         def eq_min_pressure_brine(b):
             return b.properties_waste.pressure >= b.properties_waste.pressure_osmotic
-        
-        # @self.Constraint(doc="Water recovery")
-        # def eq_water_recovery(b):
-        #     return (
-        #         b.water_recovery == b.properties_out.flow_vol / b.properties_in.flow_vol
-        #     )                     doc="Estimated density of solution")
 
-    # def fixed_cap(self, t, b_cost):
-    #     '''
+        @self.Constraint(doc="Target water recovery")
+        def eq_target_water_recovery(b):
+            return b.water_recovery >= b.target_water_recovery
 
-    #     :param t: Indexing variable for Pyomo Var()
-    #     :type t: int
-    #     :param b_cost: Costing block for unit.
-    #     :type b_cost: object
-    #     :return: Fixed capital costs for reverse osmosis [$MM]
-    #     '''
-    #     ro_cap = (self.tpec_tic * (b_cost.pump_capital_cost + b_cost.mem_capital_cost + b_cost.erd_capital_cost) +
-    #               3.3 * (self.pressure_vessel_cost[t] + self.rack_support_cost[t])) * 1E-6  # $MM ### 1.65 is TIC
-    #     return ro_cap
+        @self.Constraint(doc="Target permeate salinity")
+        def eq_target_perm_salinity(b):
+            return b.properties_out.conc_mass_comp["tds"] <= b.target_permeate_salinity
 
-    # def elect(self, t):
-    #     '''
-
-    #     :param t: Indexing variable for Pyomo Var()
-    #     :type t: int
-    #     :return:
-    #     '''
-
-    #     electricity = ((self.pump_power - self.erd_power) / 1000) / (self.flow_vol_in[t] * 3600)
-    #     return electricity
-
-    # def _set_pressure(self, b, ):
-    #     b.pressure = Var(
-    #                      initialize=45,
-    #                      domain=NonNegativeReals,
-    #                      bounds=(2, 90),
-    #                      doc='pressure')
-
-    # def _set_constraints(self, t):
-
-    #     ## FLUX CONSTRAINTS
-    #     self.water_salt_perm_eq1 = Constraint(
-    #             expr=self.b[t] <= (0.083 * self.a[t] - 0.002) * 1.25)
-    #     self.water_salt_perm_eq2 = Constraint(
-    #             expr=self.b[t] >= (0.083 * self.a[t] - 0.002) * 0.75)
-
-    #     ## RETENTATE CONSTRAINTS
-
-    #     self.retentate.eq2 = Constraint(
-    #             expr=self.retentate.conc_mass_H2O[t] == self.retentate.conc_mass_total[t] - self.conc_mass_waste[t, 'tds'])
-    #     self.retentate.eq3 = Constraint(
-    #             expr=self.retentate.mass_frac_tds[t] * self.retentate.conc_mass_total[t] == self.conc_mass_waste[t, 'tds'])
-
-    #     ## PERMEATE CONSTRAINTS
-    #     self.permeate.eq1 = Constraint(
-    #             expr=self.permeate.conc_mass_total[t] == 756 * self.permeate.mass_frac_tds[t] * 1E-6 + 995)
-    #     self.permeate.eq2 = Constraint(
-    #             expr=self.conc_mass_out[t, 'tds'] == self.permeate.conc_mass_total[t] * self.permeate.mass_frac_tds[t] * 1E-6)
-    #     self.permeate.eq3 = Constraint(
-    #             expr=self.permeate.mass_flow_H2O[t] == self.membrane_area[t] * self.pure_water_flux[t])
-    #     self.permeate.eq4 = Constraint(
-    #             expr=self.permeate.mass_flow_tds[t] == 0.5 * self.membrane_area[t] * self.b[t] * 1E-7 * (self.conc_mass_in[t, 'tds'] + self.conc_mass_waste[t, 'tds']))
-    #     self.permeate.eq5 = Constraint(
-    #             expr=self.permeate.mass_frac_tds[t] * (self.permeate.mass_flow_tds[t] + self.permeate.mass_flow_H2O[t]) == 1E6 * self.permeate.mass_flow_tds[t])
-    #     self.permeate.eq6 = Constraint(
-    #             expr=self.pure_water_flux[t] == self.pw * self.a[t] * 1E-7 * ((self.feed.pressure[t] - self.p_atm - self.pressure_drop * 0.5) -
-    #                     (self.feed.pressure_osm[t] + self.retentate.pressure_osm[t]) * 0.5))
-
-    #     # PRESSURE BALANCE
-    #     self.momentum_balance_eq = Constraint(
-    #             expr=self.retentate.pressure[t] == self.feed.pressure[t] - self.pressure_drop)
-    #     self.flow_vol_eq1 = Constraint(
-    #             expr=self.flow_vol_out[t] * self.permeate.conc_mass_total[t] == (self.permeate.mass_flow_tds[t] + self.permeate.mass_flow_H2O[t]))
-    #     self.flow_vol_eq2 = Constraint(
-    #             expr=self.flow_vol_waste[t] * self.retentate.conc_mass_total[t] == (self.retentate.mass_flow_tds[t] + self.retentate.mass_flow_H2O[t]))
-    #     self.pressure_waste_outlet_eq = Constraint(
-    #             expr=self.feed.pressure[t] - self.pressure_drop == self.pressure_waste[t])
-
-    #     # MASS BALANCE
-    #     self.mass_balance_H2O = Constraint(
-    #             expr=self.feed.mass_flow_H2O[t] == self.permeate.mass_flow_H2O[t] + self.retentate.mass_flow_H2O[t])
-    #     self.mass_balance_tds = Constraint(
-    #             expr=self.feed.mass_flow_tds[t] == self.permeate.mass_flow_tds[t] + self.retentate.mass_flow_tds[t])
-
-    #     # PERMEATE PRESSURE
-    #     self.p_out_eq = Constraint(
-    #             expr=1 == self.pressure_out[t])
-    #     self.pump_constraint_power = Constraint(
-    #             expr=self.pump_power >= 0)
-
-    #     # VESSEL COST
-    #     self.pressure_vessel_cost_eq = Constraint(
-    #             expr=self.pressure_vessel_cost[t] * 0.99 <= self.membrane_area[t] * 0.025 * 1000)  # assumes 2 trains. 150 ft start, 5ft per additional vessel. EPA.
-    #     self.rack_support_cost_eq = Constraint(
-    #             expr=self.rack_support_cost[t] * 0.99 <= (150 + (self.membrane_area[t] * 0.025 * 5)) * 33 * 2)
-    #     self.pressure_vessel_cost_eq2 = Constraint(
-    #             expr=self.pressure_vessel_cost[t] * 1.01 >= self.membrane_area[t] * 0.025 * 1000)  # assumes 2 trains. 150 ft start, 5ft per additional vessel. EPA.
-    #     self.rack_support_cost_eq2 = Constraint(
-    #             expr=self.rack_support_cost[t] * 1.01 >= (150 + (self.membrane_area[t] * 0.025 * 5)) * 33 * 2)
+        self.handle_unit_params()
 
     def initialize_build(
         self,
@@ -342,7 +437,7 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             state_args=state_args,
             hold_state=True,
         )
-        # init_log.info("Initialization Step 1a Complete.")
+        init_log.info("Initialization Step 1a Complete.")
 
         # ---------------------------------------------------------------------
         # Initialize other state blocks
@@ -359,20 +454,15 @@ class UnitProcessData(WT3UnitProcessSIDOData):
                 else:
                     state_args[k] = state_dict[k].value
 
-
         self.state_args_out = state_args_out = deepcopy(state_args)
-        for k, v  in state_args.items():
+        for k, v in state_args.items():
             if k == "flow_vol":
                 state_args_out[k] == v * 0.5
             elif k == "conc_mass_comp":
-            # elif isinstance(v, dict):
+                # elif isinstance(v, dict):
                 state_args_out[k] == dict()
                 for j, u in v.items():
                     state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
-                    # if j == "tds":
-                    #     self.removal_fraction[j].unfix()
-                        
-                        
 
         self.properties_out.initialize(
             outlvl=outlvl,
@@ -383,15 +473,15 @@ class UnitProcessData(WT3UnitProcessSIDOData):
         init_log.info("Initialization Step 1b Complete.")
 
         self.state_args_waste = state_args_waste = deepcopy(state_args)
-        for k, v  in state_args.items():
+        for k, v in state_args.items():
             if k == "flow_vol":
                 state_args_waste[k] == v * 0.5
             elif k == "conc_mass_comp":
-            # elif isinstance(v, dict):
+                # elif isinstance(v, dict):
                 state_args_waste[k] == dict()
                 for j, u in v.items():
                     state_args_waste[k][j] = self.removal_fraction[j].value * u
-        
+
         self.properties_waste.initialize(
             outlvl=outlvl,
             optarg=optarg,
@@ -421,306 +511,10 @@ class UnitProcessData(WT3UnitProcessSIDOData):
         # if not check_optimal_termination(res):
         #     raise InitializationError(f"Unit model {self.name} failed to initialize.")
 
-
     def calculate_scaling_factors(self):
-        print("\n\n\ncalc scaling factors RO\n\n")
+        # TODO
+        pass
 
     @property
     def default_costing_method(self):
         return cost_reverse_osmosis
-
-    def get_costing(self):
-        """
-        Initialize the unit in WaterTAP3.
-        """
-
-        basis_year = 2007
-        tpec_tic = "TIC"
-
-        sys_cost_params = self.parent_block().costing_param
-        self.parent_block().has_ro = True
-        if "erd" in self.unit_params.keys():
-            self.erd = self.unit_params["erd"]
-            if self.erd not in ["yes", "no"]:
-                self.erd = "no"
-        else:
-            self.erd = "no"
-        # self.del_component(self.outlet_pressure_constraint)
-        # self.del_component(self.waste_pressure_constraint)
-        # self.del_component(self.recovery_equation)
-        # self.del_component(self.flow_balance)
-        # self.del_component(self.component_removal_equation)
-
-        self.deltaP_waste.unfix()
-        self.deltaP_outlet.unfix()
-
-        self.permeate = Block()
-        self.feed = Block()
-        self.retentate = Block()
-
-        self.units_meta = self.config.property_package.get_metadata().get_derived_units
-
-        # DEFINE VARIABLES
-        self.feed.water_flux = Var(
-            initialize=5e-3,
-            bounds=(1e-5, 1.5e-2),
-            units=self.units_meta("mass")
-            * self.units_meta("length") ** -2
-            * self.units_meta("") ** -1,
-            domain=NonNegativeReals,
-            doc="water flux",
-        )
-        self.retentate.water_flux = Var(
-            initialize=5e-3,
-            bounds=(1e-5, 1.5e-2),
-            units=self.units_meta("mass")
-            * self.units_meta("length") ** -2
-            * self.units_meta("") ** -1,
-            domain=NonNegativeReals,
-            doc="water flux",
-        )
-        self.pure_water_flux = Var(
-            initialize=5e-3,
-            bounds=(1e-3, 1.5e-2),
-            units=self.units_meta("mass")
-            * self.units_meta("length") ** -2
-            * self.units_meta("") ** -1,
-            domain=NonNegativeReals,
-            doc="water flux",
-        )
-        self.a = Var(
-            initialize=4.2,
-            bounds=(1, 9),
-            domain=NonNegativeReals,
-            doc="water permeability",
-        )
-        self.b = Var(
-            initialize=0.35,
-            bounds=(0.1, 0.9),
-            domain=NonNegativeReals,
-            doc="Salt permeability",
-        )
-        self.mem_cost = Var(
-            initialize=40, bounds=(10, 80), domain=NonNegativeReals, doc="Membrane cost"
-        )
-        self.membrane_area = Var(
-            initialize=1e5, domain=NonNegativeReals, bounds=(1e1, 1e12), doc="area"
-        )
-        self.factor_membrane_replacement = Var(
-            initialize=0.2,
-            domain=NonNegativeReals,
-            bounds=(0.01, 3),
-            doc="replacement rate membrane fraction",
-        )
-        self.pressure_vessel_cost = Var(
-            # initialize=2e6,
-            bounds=(0, None),
-            doc="Pressure vessel cost",
-        )
-        self.rack_support_cost = Var(
-            # initialize=1e6,
-            bounds=(0, None),
-            doc="Rack support cost",
-        )
-        self.factor_membrane_replacement.fix(0.25)  #
-
-        # from excel regression based on paper for membrane cost y = 0.1285x - 0.0452 #R² =
-        # 0.9932. y = b. x = a.
-        # same 4 membranes used for regression ŷ = 15.04895X1 - 131.08641X2 + 29.43797
-
-        for b in [self.permeate, self.feed, self.retentate]:
-            self._set_flow_mass(
-                b,
-            )
-            self._set_mass_frac(
-                b,
-            )
-            self._set_conc_mass(
-                b,
-            )
-            self._set_osm_coeff(
-                b,
-            )
-            self._set_pressure_osm(
-                b,
-            )
-            if str(b) == "permeate":
-                continue
-            else:
-                self._set_pressure(
-                    b,
-                )
-
-        self.feed.pressure.unfix()
-        self.mem_cost.fix(30)
-
-
-        ## CONSTANTS
-        self.pump_eff = 0.8
-        self.erd_eff = 0.9
-        self.pressure_drop = 3 * pyunits.bar
-        self.p_atm = 1
-        self.pw = 1000
-
-        self.pressure_diff = (
-            self.feed.pressure[t] - self.pressure_in[t]
-        ) * 1e5  # assumes atm pressure before pump. change to Pa
-        self.pump_power = (self.flow_vol_in[t] * self.pressure_diff) / self.pump_eff
-
-        self._set_constraints(t)
-
-        flow_in_m3hr = pyunits.convert(
-            self.flow_vol_in[t], to_units=pyunits.m**3 / pyunits.hour
-        )
-        flow_out_m3hr = pyunits.convert(
-            self.flow_vol_out[t], to_units=pyunits.m**3 / pyunits.hour
-        )
-        flow_waste_m3hr = pyunits.convert(
-            self.flow_vol_waste[t], to_units=pyunits.m**3 / pyunits.hour
-        )
-
-        try:
-            scaling = self.unit_params["scaling"]
-
-        except:
-            scaling = "no"
-
-        for j in self.const_list2:
-            if scaling == "yes":
-                self.del_component(self.component_mass_balance)
-                # setattr(self, ('%s_eq1' % j), Constraint(
-                #         expr=self.flow_vol_in[t] * self.conc_mass_in[j] == self.flow_vol_out[t] *
-                #              self.conc_mass_out[j] + self.flow_vol_waste[t] * self.conc_mass_waste[j]))
-
-                # setattr(self, ('%s_eq' % j), Constraint(
-                #         expr=self.removal_fraction[j] * self.flow_vol_in[t] * self.conc_mass_in[j] == self.flow_vol_waste[t] * self.conc_mass_waste[j]))
-                setattr(
-                    self,
-                    ("%s_eq1" % j),
-                    Constraint(
-                        expr=flow_in_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_in[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                        == flow_out_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_out[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                        + flow_waste_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_out[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                    ),
-                )
-                setattr(
-                    self,
-                    ("%s_eq" % j),
-                    Constraint(
-                        expr=self.removal_fraction[j]
-                        * flow_in_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_in[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                        == flow_waste_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_waste[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                    ),
-                )
-            else:
-                setattr(
-                    self,
-                    ("%s_eq" % j),
-                    Constraint(
-                        expr=self.removal_fraction[j]
-                        * flow_in_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_in[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                        == flow_waste_m3hr
-                        * pyunits.convert(
-                            self.conc_mass_waste[j], to_units=pyunits.mg / pyunits.liter
-                        )
-                    ),
-                )
-
-        b_cost = self.costing
-        b_cost.pump_capital_cost = self.pump_power * (53 / 1e5 * 3600) ** 0.97
-        b_cost.pressure_vessel_cap_cost = (
-            self.pressure_vessel_cost[t] + self.rack_support_cost[t]
-        )
-
-        ################ Energy Recovery
-        # assumes atmospheric pressure out
-        if self.erd == "yes":
-            x_value = (
-                (self.retentate.mass_flow_tds[t] + self.retentate.mass_flow_H2O[t])
-                / self.retentate.conc_mass_total[t]
-                * 3600
-            )
-            b_cost.erd_capital_cost = (
-                3134.7 * (x_value * self.retentate.conc_mass_total[t]) ** 0.58
-            )
-            self.erd_power = (
-                self.flow_vol_waste[t] * (self.retentate.pressure[t] - 1) * 1e5
-            ) / self.erd_eff
-
-        if self.erd == "no":
-            self.erd_power = 0
-
-        b_cost.erd_capital_cost = 0
-        b_cost.mem_capital_cost = self.mem_cost[t] * self.membrane_area[t]
-
-        self.costing.fixed_cap_inv_unadjusted = Expression(
-            expr=self.fixed_cap(t, b_cost), doc="Unadjusted fixed capital investment"
-        )
-
-        self.num_membranes = (
-            self.membrane_area[t] / 37.161
-        )  # 400 ft2 / membrane = 37.161 m2 / membrane from BRACKISH paper
-        self.ro_recovery = self.flow_vol_out[t] / self.flow_vol_in[t]
-        self.flux = self.flow_vol_out[t] / (self.membrane_area[t] * pyunits.m**2)
-        self.flux_lmh = pyunits.convert(
-            self.flux, to_units=(pyunits.liter / pyunits.m**2 / pyunits.hour)
-        )
-        self.salt_rejection_mass = (
-            1 - self.permeate.mass_flow_tds[t] / self.feed.mass_flow_tds[t]
-        ) * 100
-        self.salt_rejection_conc = (
-            1 - self.conc_mass_out[t, "tds"] / self.conc_mass_in[t, "tds"]
-        ) * 100
-        self.SEC = (
-            (self.flow_vol_in[t] * self.pressure_drop) / self.flow_vol_out[t]
-        ) * self.pump_eff  # specific energy consumption, from - Zhu, A., Christofides, P., Cohen, Y., "On RO membrane and energy costs..."
-        self.salt_flux = self.b[t] * (
-            self.conc_mass_in[t, "tds"] - self.conc_mass_out[t, "tds"]
-        )
-
-        ################ operating
-        # membrane operating cost
-        b_cost.other_var_cost = (
-            self.factor_membrane_replacement[t]
-            * self.mem_cost[t]
-            * self.membrane_area[t]
-            * sys_cost_params.plant_cap_utilization
-            * 1e-6
-        )
-        self.electricity = Expression(
-            expr=self.elect(t), doc="Electricity intensity [kWh/m3]"
-        )
-        ####### electricity and chems
-        sys_specs = self.parent_block().costing_param
-        # self.electricity = ((self.pump_power - self.erd_power) / 1000) / (self.flow_vol_in[t] * 3600)
-        b_cost.pump_electricity_cost = (
-            1e-6 * (self.pump_power / 1000) * 365 * 24 * sys_specs.electricity_price
-        )
-        b_cost.erd_electricity_sold = (
-            1e-6 * (self.erd_power / 1000) * 365 * 24 * sys_specs.electricity_price
-        )
-        # b_cost.electricity_cost = (b_cost.pump_electricity_cost - b_cost.erd_electricity_sold) * sys_cost_params.plant_cap_utilization
-
-        self.chem_dict = {"unit_cost": 0.01}
-
-        financials.get_complete_costing(
-            self.costing, basis_year=basis_year, tpec_tic=tpec_tic
-        )
