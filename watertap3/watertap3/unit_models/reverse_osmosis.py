@@ -26,7 +26,7 @@ __author__ = "Kurban Sitterley"
 
 def cost_reverse_osmosis(blk):
 
-    blk.basis_year = 2007
+    blk.basis_year = 2018
     blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
 
     blk.number_trains = Var(
@@ -37,17 +37,17 @@ def cost_reverse_osmosis(blk):
     blk.membrane_unit_cost = Var(
         initialize=30,
         bounds=(10, 80),
-        units=pyunits.USD_2018 / pyunits.m**2,
+        units=blk.basis_currency / pyunits.m**2,
         doc="Membrane cost",
     )
     blk.vessel_unit_cost = Var(
         initialize=1000,
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="Unit cost for pressure vessel",
     )
     blk.rack_unit_cost = Var(
         initialize=33,
-        units=pyunits.USD_2018 / pyunits.ft,
+        units=blk.basis_currency / pyunits.ft,
         doc="Unit cost for rack per length",
     )
     blk.number_vessels_per_area = Var(
@@ -75,7 +75,7 @@ def cost_reverse_osmosis(blk):
     blk.pump_capital_cost_base = Var(
         initialize=1.908,  # 53 / 1e5 * 3600,
         bounds=(1, 3),
-        units=pyunits.USD_2018,  # ($ * hr) / (m^3 * bar)
+        units=blk.basis_currency,  # ($ * hr) / (m^3 * bar)
         doc="Pump capital cost equation - base",
     )
     blk.pump_capital_cost_exp = Var(
@@ -93,7 +93,7 @@ def cost_reverse_osmosis(blk):
 
     blk.erd_capital_cost_base = Var(
         initialize=3134.7,
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="ERD capital cost equation - base",
     )
     blk.erd_capital_cost_exp = Var(
@@ -110,37 +110,38 @@ def cost_reverse_osmosis(blk):
     )
 
     blk.fix_all_vars()
+    
     make_fixed_operating_cost_var(blk)
     make_capital_cost_var(blk)
     blk.costing_package.add_cost_factor(blk, "TIC")
     blk.pressure_vessel_capital_cost = Var(
         initialize=1e6,
         bounds=(0, None),
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="Pressure vessel cost",
     )
     blk.rack_support_capital_cost = Var(
         initialize=1e6,
         bounds=(0, None),
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="Rack support cost",
     )
     blk.pump_capital_cost = Var(
         initialize=1e5,
         bounds=(0, None),
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="Pump capital cost",
     )
     blk.erd_capital_cost = Var(
         initialize=1e5,
         bounds=(0, None),
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="Energy recovery device capital cost",
     )
     blk.membrane_capital_cost = Var(
         initialize=1e5,
         bounds=(0, None),
-        units=pyunits.USD_2018,
+        units=blk.basis_currency,
         doc="Membrane capital cost",
     )
 
