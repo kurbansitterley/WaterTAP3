@@ -111,6 +111,7 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
 
         Returns: None
         """
+        # return 
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
         solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
 
