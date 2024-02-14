@@ -1,14 +1,14 @@
 import os
 import pandas as pd
-from pyomo.environ import Var, Constraint, Expression, Param, units as pyunits
+from pyomo.environ import Block, Var, Constraint, Expression, Param, units as pyunits
 from idaes.core import declare_process_block_class
 from idaes.core.base.costing_base import (
-    FlowsheetCostingBlockData,
     UnitModelCostingBlockData,
     register_idaes_currency_units,
 )
 from watertap.costing.costing_base import WaterTAPCostingBlockData
 
+__author__ = "Kurban Sitterley"
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 case_study_TEA_basis_file = (
     os.path.abspath(os.path.join(__location__, os.pardir))
@@ -18,50 +18,51 @@ industrial_electricity_costs_file = (
     os.path.abspath(os.path.join(__location__, os.pardir))
     + "/data/industrial_electricity_costs_2020.csv"
 )
-chem_costs_file = (
+material_costs_file = (
     os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/chemical_costs.csv"
 )
 plant_costs_indices_file = (
     os.path.abspath(os.path.join(__location__, os.pardir))
     + "/data/plant_cost_indices.csv"
 )
+last_year_for_cost_indicies = 2050
 
 
 @declare_process_block_class("WT3Costing")
 class WT3CostingData(WaterTAPCostingBlockData):
-# class WT3CostingData(FlowsheetCostingBlockData):
     def build_global_params(self):
         register_idaes_currency_units()
         case_study = self.parent_block().train["case_study"]
-        self.base_currency = pyunits.USD_2021
         self.base_period = pyunits.year
 
-        self.basis_data = pd.read_csv(case_study_TEA_basis_file, index_col="case_study").loc[case_study]
+        self.basis_data = pd.read_csv(
+            case_study_TEA_basis_file, index_col="case_study"
+        ).loc[case_study]
+        self.material_costs_data = pd.read_csv(
+            material_costs_file, index_col="material"
+        )
         self.basis_data.set_index("variable", inplace=True)
         self.basis_data = self.basis_data[["value"]]
         electricity_price_df = pd.read_csv(
             industrial_electricity_costs_file, index_col="location"
         )
         electricity_price_df.index = electricity_price_df.index.str.lower()
-        # TODO: change these param names in csv
+        self.basis_year = int(self.basis_data.loc["basis_year"].value)
+        self.base_currency = getattr(pyunits, f"USD_{self.basis_year}")
         basis_params = [
-            "land_cost_percent",
-            "working_capital_percent",
-            "base_salary_per_fci",
-            "maintenance_cost_percent",
-            "laboratory_fees_percent",
-            "insurance_and_taxes_percent",
-            "employee_benefits_percent",
-            "plant_life_yrs",
-            "analysis_year",
+            "land_cost_factor",  # land_cost_percent, land_cost_percent_FCI
+            "working_capital_factor",  # working_capital_percent, working_cap_percent_FCI
+            "salary_cost_factor",  # base_salary_per_fci, salaries_percent_FCI
+            "maintenance_cost_factor",  # maintenance_cost_percent, maintenance_costs_percent_FCI
+            "laboratory_cost_factor",  # laboratory_fees_percent, lab_fees_percent_FCI
+            "insurance_taxes_cost_factor",  # insurance_and_taxes_percent, insurance_taxes_percent_FCI
+            "benefits_cost_factor",  # employee_benefits_percent, benefit_percent_of_salary
+            "plant_lifetime",
             "debt_interest_rate",
-            "plant_cap_utilization",
-            # "total_investment_factor"
+            "utilization_factor",
         ]
 
-        self.location = (
-            self.basis_data.loc["location_basis"].value
-        )
+        self.location = self.basis_data.loc["location_basis"].value
         self.electricity_cost = Var(
             initialize=electricity_price_df.loc[self.location].iloc[0],
             units=self.base_currency / pyunits.kWh,
@@ -70,21 +71,26 @@ class WT3CostingData(WaterTAPCostingBlockData):
         self.defined_flows["electricity"] = self.electricity_cost
 
         for bp in basis_params:
-            p = float(
-                self.basis_data.loc[bp].value
-            )
+            p = float(self.basis_data.loc[bp].value)
             v = Var(
                 initialize=p,
                 doc=f"Cost basis parameter: {bp.replace('_', ' ').title()}",
             )
             self.add_component(bp, v)
-        
-        self.total_investment_factor = Var(initialize=1)
 
-        self.capital_recovery_factor = Expression(expr=(self.debt_interest_rate * (1 + self.debt_interest_rate) ** self.plant_life_yrs) / (((1 + self.debt_interest_rate)** self.plant_life_yrs) - 1))
+        self.factor_total_investment = Var(
+            initialize=1.0,
+            doc="Total investment factor [investment cost/equipment cost]",
+            units=pyunits.dimensionless,
+        )
 
-        # b.capital_recovery_factor = (wacc * (1 + wacc) ** sys_specs.plant_lifetime_yrs) / (
-        #         ((1 + wacc) ** sys_specs.plant_lifetime_yrs) - 1)
+        self.capital_recovery_factor = Expression(
+            expr=(
+                self.debt_interest_rate
+                * (1 + self.debt_interest_rate) ** self.plant_lifetime
+            )
+            / (((1 + self.debt_interest_rate) ** self.plant_lifetime) - 1)
+        )
 
         self.TPEC = Var(
             initialize=3.4,
@@ -97,25 +103,48 @@ class WT3CostingData(WaterTAPCostingBlockData):
             doc=f"Total installed cost factor (TIC)",
         )
         self.fix_all_vars()
-
+        # self.build_chem_params()
 
     def build_process_costs(self):
         # add total_captial_cost and total_operating_cost
         self._build_common_process_costs()
+        # self.material_costs_data = pd.read_csv(material_costs_file, index_col="material")
 
-        self.total_capital_cost_constraint = Constraint(
-            expr=self.total_capital_cost
-            == self.total_investment_factor * self.aggregate_capital_cost
+        self.land_cost = Expression(
+            expr=self.aggregate_capital_cost * self.land_cost_factor
         )
 
-        # self.maintenance_labor_chemical_operating_cost = Expression(
-        #     expr=self.factor_maintenance_labor_chemical * self.aggregate_capital_cost,
-        #     doc="Maintenance-labor-chemical operating cost",
-        # )
+        self.working_capital_cost = Expression(
+            expr=self.aggregate_capital_cost * self.working_capital_factor
+        )
+
+        self.salary_cost = Expression(
+            expr=self.aggregate_capital_cost * self.salary_cost_factor
+        )
+
+        self.benefit_cost = Expression(
+            expr=self.salary_cost * self.benefits_cost_factor
+        )
+
+        self.maintenance_cost = Expression(
+            expr=self.aggregate_capital_cost * self.maintenance_cost_factor
+        )
+
+        self.lab_cost = Expression(
+            expr=self.aggregate_capital_cost * self.laboratory_cost_factor
+        )
+
+        self.insurance_taxes_cost = Expression(
+            expr=self.aggregate_capital_cost * self.insurance_taxes_cost_factor
+        )
 
         self.total_fixed_operating_cost = Expression(
-            expr=self.aggregate_fixed_operating_cost,
-            # + self.maintenance_labor_chemical_operating_cost,
+            expr=self.aggregate_fixed_operating_cost
+            + self.salary_cost
+            + self.benefit_cost
+            + self.maintenance_cost
+            + self.lab_cost
+            + self.insurance_taxes_cost,
             doc="Total fixed operating costs",
         )
 
@@ -123,11 +152,18 @@ class WT3CostingData(WaterTAPCostingBlockData):
             expr=(
                 self.aggregate_variable_operating_cost
                 + sum(self.aggregate_flow_costs[f] for f in self.used_flows)
-                * self.plant_cap_utilization
+                * self.utilization_factor
             )
             if self.used_flows
             else self.aggregate_variable_operating_cost,
             doc="Total variable operating cost of process per operating period",
+        )
+
+        self.total_capital_cost_constraint = Constraint(
+            expr=self.total_capital_cost
+            == self.factor_total_investment * self.aggregate_capital_cost
+            + self.land_cost
+            + self.working_capital_cost
         )
 
         self.total_operating_cost_constraint = Constraint(
@@ -144,8 +180,87 @@ class WT3CostingData(WaterTAPCostingBlockData):
             doc="Total annualized cost of operation",
         )
 
+    def add_material_cost_param_block(self, material=None):
+        if material is None:
+            raise ValueError("Must provide chemical name to be costed.")
+        mat_ser = self.material_costs_data.loc[material]
+        n = getattr(pyunits, f"USD_{mat_ser.price_year}")
+        d = getattr(pyunits, mat_ser.price_units.split("/")[-1])
+
+        def build_rule(blk):
+            blk.cost = Param(
+                initialize=mat_ser.price,
+                mutable=True,
+                units=n / d,
+                doc=f"{material.title().replace('_', ' ')} cost",
+            )
+            blk.purity = Param(
+                initialize=mat_ser.purity,
+                mutable=True,
+                units=pyunits.dimensionless,
+                doc=f"{material.title().replace('_', ' ')} purity",
+            )
+            blk.parent_block().defined_flows[material] = blk.cost
+            blk.parent_block().register_flow_type(material, blk.cost / blk.purity)
+
+        mat_block = Block(rule=build_rule)
+        self.add_component(material, mat_block)
+
+from watertap3.utils.financials import get_ind_table
+
+
 @declare_process_block_class("WT3UnitCosting")
 class WT3UnitCostingData(UnitModelCostingBlockData):
-    
     def build(self):
         super().build()
+        self.basis_year = None
+
+    def cost_chemical_flow(self, **kwargs):
+        self.cost_material_flow(**kwargs)
+        # return self.cost_material_flow
+
+    def cost_material_flow(self, flow_rate=None, name=None):
+        if flow_rate is None:
+            flow_rate = self.unit_model.properties_in.flow_vol
+
+        if hasattr(self.unit_model, "chemical"):
+            mat = self.unit_model.chemical
+        elif hasattr(self.unit_model, "material"):
+            mat = self.unit_model.material
+        if mat not in self.costing_package.flow_types:
+            self.costing_package.add_material_cost_param_block(material=mat)
+
+        flow_expr = Expression(
+            expr=pyunits.convert(
+                flow_rate * self.unit_model.dose,
+                to_units=pyunits.kg / self.costing_package.base_period,
+            )
+        )
+
+        if name is None:
+            name = f"{mat}_flow"
+
+        self.add_component(name, flow_expr)
+
+        self.costing_package.cost_flow(flow_expr, mat)
+
+    def get_cost_indices(self):
+        if self.basis_year is None:
+            return
+
+        df = get_ind_table(self.basis_year)
+        self.capital_factor = Param(
+            initialize=df.loc[self.basis_year].capital_factor,
+            mutable=True,
+            doc="Capital factor",
+        )
+        self.chemical_factor = Param(
+            initialize=df.loc[self.basis_year].chemical_factor,
+            mutable=True,
+            doc="Chemical factor",
+        )
+        self.labor_factor = Param(
+            initialize=df.loc[self.basis_year].labor_factor,
+            mutable=True,
+            doc="Labor factor",
+        )
