@@ -79,7 +79,7 @@ def cost_chlorination(blk):
         input_vars=[blk.unit_model.dose, blk.flow_mgd],
         output_vars=[blk.capital_cost_surrogate],
     )
-    
+
     sys.stdout = oldstdout
 
     @blk.Constraint(doc="Flow in MGD conversion for surrogate model")
@@ -102,7 +102,14 @@ def cost_chlorination(blk):
             to_units=pyunits.kilowatt,
         )
 
+    @blk.Expression(doc="Chemical flow")
+    def chemical_flow(b):
+        return pyunits.convert(b.unit_model.properties_in.flow_vol * b.unit_model.dose, to_units=pyunits.kg/pyunits.yr)
+
+
     blk.costing_package.cost_flow(blk.power_required, "electricity")
+    blk.cost_chemical_flow()
+    # blk.costing_package.cost_flow(blk.chemical_flow, blk.unit_model.chemical)
     # TODO add chems
     # self.chem_dict = {self.chem_name: self.dose * 1E-3}
 
@@ -111,6 +118,11 @@ def cost_chlorination(blk):
 class UnitProcessData(WT3UnitProcessSISOData):
     def build(self):
         super().build()
+
+        if "chemical" in self.config.unit_params.keys():
+            self.chemical = self.config.unit_params["chemical"]
+        else:
+            self.chemical = "chlorine"
 
         self.contact_time = Param(
             initialize=1.5,
