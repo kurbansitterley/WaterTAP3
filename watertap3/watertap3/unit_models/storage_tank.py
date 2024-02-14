@@ -1,6 +1,8 @@
-from pyomo.environ import Var, Constraint, Expression, units as pyunits
-from watertap3.utils import financials
-from watertap3.core.wt3_unit_pt import WT3UnitProcessPT
+from pyomo.environ import Var, Param, units as pyunits
+from idaes.core import declare_process_block_class
+from watertap.costing.util import make_capital_cost_var
+from watertap3.core.wt3_unit_pt import WT3UnitProcessPTData
+
 
 ## REFERENCE
 ## CAPITAL:
@@ -11,60 +13,81 @@ from watertap3.core.wt3_unit_pt import WT3UnitProcessPT
 # Regression of cost vs. capacity
 # Capacity calculated based on storage time (user input)
 
-module_name = 'storage_tank'
+module_name = "storage_tank"
 
-class UnitProcess(WT3UnitProcessPT):
 
-    def tank_setup(self):
-        time = self.flowsheet().config.time.first()
-        
-        self.flow_in = pyunits.convert(self.flow_vol_in[time], 
-            to_units=pyunits.m**3/pyunits.hr)
+def cost_storage_tank(blk):
+    blk.basis_year = 1998
+    blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
 
-        self.tank_capital_A = Var(initialize=0.00344,
-            bounds=(0, None),
-            doc='Storage tank capital A factor')
-        self.tank_capital_A.fix(0.00344)
+    blk.capital_cost_base = Var(
+        initialize=0.00344,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Storage tank capital cost basis",
+    )
 
-        self.tank_capital_B = Var(initialize=3,
-            bounds=(0, None),
-            doc='Storage tank capital B factor')
-        self.tank_capital_B.fix(0.72093)
+    blk.capital_cost_exp = Var(
+        initialize=0.72093,
+        bounds=(0, None),
+        units=pyunits.dimensionless,
+        doc="Storage tank capital cost exponent",
+    )
 
-        self.storage_time = Var(initialize=6,
-            bounds=(0, None),
+    blk.handle_costing_unit_params()
+
+    blk.fix_all_vars()
+
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, None)
+
+    @blk.Constraint(doc="Capital cost equation")
+    def capital_cost_constraint(b):
+        tank_vol_dim = pyunits.convert(
+            blk.unit_model.storage_volume * pyunits.m**-3,
+            to_units=pyunits.dimensionless,
+        )
+        return b.capital_cost == pyunits.convert(
+            b.capital_cost_base * tank_vol_dim**b.capital_cost_exp,
+            to_units=b.costing_package.base_currency,
+        )
+
+
+@declare_process_block_class("UnitProcess")
+class UnitProcessData(WT3UnitProcessPTData):
+    def build(self):
+        super().build()
+
+        self.storage_time = Param(
+            initialize=6,
+            mutable=True,
             units=pyunits.hour,
-            doc='Storage duration [hour]')
-        self.storage_time.fix(2)
+            doc="Storage duration",
+        )
 
-        self.surge_capacity = Var(initialize=0.2,
-            bounds=(0, None),
+        self.surge_capacity = Param(
+            initialize=0.2,
+            mutable=True,
             units=pyunits.dimensionless,
-            doc='Storage tank surge capacity [%]')
-        self.surge_capacity.fix(0.1)
+            doc="Storage tank surge capacity",
+        )
 
-        self.storage_vol = Var(initialize=1000,
+        self.handle_unit_params()
+
+        self.storage_volume = Var(
+            initialize=1000,
             bounds=(0, None),
             units=pyunits.m**3,
-            doc='Storage tank volume [m3]')
+            doc="Storage tank volume",
+        )
 
-        for k, v in self.unit_params.items():
-            if k in ['storage_time', 'surge_capacity']:
-                getattr(self, k).fix(v)
-        
-        self.storage_vol_constr = Constraint(expr= 
-            self.storage_vol == self.flow_in * self.storage_time *
-                (1 + self.surge_capacity))
+        @self.Constraint(doc="Storage volume equation")
+        def storage_volume_constraint(b):
+            return b.storage_volume == pyunits.convert(
+                b.properties_in.flow_vol * b.storage_time * (1 + b.surge_capacity),
+                to_units=pyunits.m**3,
+            )
 
-    def get_costing(self):
-        '''
-        Initialize the unit in WaterTAP3.
-        '''
-        basis_year = 1998
-        self.tank_setup()
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=
-            self.tank_capital_A * self.storage_vol ** self.tank_capital_B,
-            doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=0,
-            doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing, basis_year=basis_year)
+    @property
+    def default_costing_method(self):
+        return cost_storage_tank
