@@ -265,7 +265,7 @@ def cost_reverse_osmosis(blk):
     # self.chem_dict = {"unit_cost": 0.01}
 
 
-@declare_process_block_class("UnitProcess")
+@declare_process_block_class("ReverseOsmosis")
 class UnitProcessData(WT3UnitProcessSIDOData):
     def build(self):
 

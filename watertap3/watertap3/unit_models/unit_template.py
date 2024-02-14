@@ -1,6 +1,8 @@
-from pyomo.environ import Var, Constraint, Expression, units as pyunits
-from watertap3.utils import financials
-from watertap3.core.wt3_unit_sido import WT3UnitProcess
+from pyomo.environ import Var, Constraint, Param, Expression, units as pyunits
+from idaes.core import declare_process_block_class
+from watertap.costing.util import make_capital_cost_var
+from watertap3.core.wt3_unit_pt import WT3UnitProcessPTData
+from watertap3.core.util.pumping_energy import pumping_energy
 
 ## REFERENCE
 ## CAPITAL:
@@ -10,37 +12,22 @@ from watertap3.core.wt3_unit_sido import WT3UnitProcess
 
 module_name = 'unit'
 
-class UnitProcess(WT3UnitProcess):
+def cost_unit_model(blk):
+    blk.basis_year = 2018
+    blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
+    ## VARS GO HERE
+    blk.handle_costing_unit_params()
+    blk.fix_all_vars()
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, None)
+    ## CONSTRAINTS GO HERE
 
-    def fixed_cap(self):
-        '''
-        Docstrings go here.
+@declare_process_block_class("UnitProcess")
+class UnitProcessData(WT3UnitProcessPTData):
 
-        :return:
-        '''
-        time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time],
-            to_units=pyunits.m**3/pyunits.hr)
-        unit_cap = 0
-        return unit_cap
-
-    def elect(self):
-        '''
-        Docstrings go here.
-
-        :return:
-        '''
-        electricity = 0
-        return electricity
-
-    def get_costing(self):
-        '''
-        Initialize the unit in WaterTAP3.
-        '''
-        basis_year = 2020
-        tpec_tic = 'TPEC'
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=self.elect(),
-                doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
+    def build(self):
+        super().build()
+    
+    @property
+    def default_costing_method(self):
+        return cost_unit_model

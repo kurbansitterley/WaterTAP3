@@ -8,7 +8,7 @@ from watertap3.core.wt3_unit_siso import WT3UnitProcessSISOData
 module_name = "cartridge_filtration"
 
 
-@declare_process_block_class("UnitProcess")
+@declare_process_block_class("CartridgeFiltration")
 class UnitProcessData(WT3UnitProcessSISOData):
     def build(self):
         super().build()
@@ -19,8 +19,6 @@ class UnitProcessData(WT3UnitProcessSISOData):
 
 
 def cost_cartridge_filtration(blk):
-
-    unit_params = blk.unit_model.unit_params
 
     blk.basis_year = 2014
     blk.basis_currency = getattr(pyunits, f"MUSD_{blk.basis_year}")

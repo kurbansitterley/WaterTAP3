@@ -53,7 +53,7 @@ def cost_storage_tank(blk):
         )
 
 
-@declare_process_block_class("UnitProcess")
+@declare_process_block_class("StorageTank")
 class UnitProcessData(WT3UnitProcessPTData):
     def build(self):
         super().build()

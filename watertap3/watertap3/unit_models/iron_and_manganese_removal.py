@@ -149,7 +149,7 @@ def cost_iron_and_manganese_removal(blk):
     blk.costing_package.cost_flow(blk.power_required, "electricity")
 
 
-@declare_process_block_class("UnitProcess")
+@declare_process_block_class("IronAndManganeseRemoval")
 class UnitProcessData(WT3UnitProcessSISOData):
     def build(self):
         super().build()

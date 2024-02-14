@@ -102,19 +102,11 @@ def cost_chlorination(blk):
             to_units=pyunits.kilowatt,
         )
 
-    @blk.Expression(doc="Chemical flow")
-    def chemical_flow(b):
-        return pyunits.convert(b.unit_model.properties_in.flow_vol * b.unit_model.dose, to_units=pyunits.kg/pyunits.yr)
-
-
     blk.costing_package.cost_flow(blk.power_required, "electricity")
     blk.cost_chemical_flow()
-    # blk.costing_package.cost_flow(blk.chemical_flow, blk.unit_model.chemical)
-    # TODO add chems
-    # self.chem_dict = {self.chem_name: self.dose * 1E-3}
 
 
-@declare_process_block_class("UnitProcess")
+@declare_process_block_class("Chlorination")
 class UnitProcessData(WT3UnitProcessSISOData):
     def build(self):
         super().build()

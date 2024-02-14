@@ -1,19 +1,25 @@
-from pyomo.environ import Var, units as pyunits
+from pyomo.environ import Var, Param, units as pyunits
 from idaes.core import declare_process_block_class
 from watertap.costing.util import make_capital_cost_var
 from watertap3.core.wt3_unit_pt import WT3UnitProcessPTData
-from watertap3.core.util.pumping_energy import pumping_energy
 
 ## REFERENCE: Derived from Voutchkov (2018) Table 4.6 and 4.7
 
 module_name = "well_field"
 
 
-@declare_process_block_class("UnitProcess")
+@declare_process_block_class("WellField")
 class UnitProcessData(WT3UnitProcessPTData):
     def build(self):
         super().build()
 
+        self.piping_distance = Param(
+            initialize=1, mutable=True, units=pyunits.mile, doc="Piping distance"
+        )
+        self.piping_diameter = Param(
+            initialize=8, mutable=True, units=pyunits.inch, doc="Piping diameter"
+        )
+        self.handle_unit_params()
 
     @property
     def default_costing_method(self):
@@ -21,8 +27,6 @@ class UnitProcessData(WT3UnitProcessPTData):
 
 
 def cost_well_field(blk):
-
-    unit_params = blk.unit_model.unit_params
 
     blk.basis_year = 2018
     blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
@@ -40,13 +44,6 @@ def cost_well_field(blk):
         doc="Well field capital cost exponent",
     )
 
-    blk.piping_distance = Var(
-        initialize=1, bounds=(0, None), units=pyunits.mile, doc="Piping distance"
-    )
-    blk.piping_diameter = Var(
-        initialize=8, bounds=(0, None), units=pyunits.inch, doc="Piping diameter"
-    )
-
     blk.piping_cost_basis = Var(
         initialize=35000,
         bounds=(0, None),
@@ -54,11 +51,8 @@ def cost_well_field(blk):
         doc="Piping cost basis",
     )
 
-    pumping_energy(blk)
-
-    for k, v in unit_params.items():
-        if hasattr(blk, k):
-            getattr(blk, k).fix(v)
+    blk.add_pumping_energy()
+    blk.handle_costing_unit_params()
 
     blk.fix_all_vars()
 
@@ -95,7 +89,9 @@ def cost_well_field(blk):
     def piping_capital_cost_constraint(b):
         return (
             b.piping_capital_cost
-            == b.piping_cost_basis * b.piping_distance * b.piping_diameter
+            == b.piping_cost_basis
+            * b.unit_model.piping_distance
+            * b.unit_model.piping_diameter
         )
 
     @blk.Constraint(doc="Unit total capital cost")
@@ -104,5 +100,3 @@ def cost_well_field(blk):
             b.well_field_capital_cost + b.piping_capital_cost,
             to_units=b.costing_package.base_currency,
         )
-
-    blk.costing_package.cost_flow(blk.power_required, "electricity")
