@@ -15,7 +15,7 @@ def cost_basic_unit(blk):
         blk.flow_basis,
         blk.cap_basis,
         blk.cap_exp,
-        blk.energy_intensity,
+        blk._energy_intensity,
         blk.basis_year,
         blk.base_kind,
     ) = cost_curves.basic_unit(basic_unit_name)
@@ -60,7 +60,7 @@ def cost_basic_unit(blk):
         doc=f"{basic_unit_name} (basic unit) capital cost exponent",
     )
     blk.energy_intensity = Var(
-        initialize=blk.energy_intensity,
+        initialize=blk._energy_intensity,
         bounds=(0, None),
         units=pyunits.kWh / pyunits.m**3,
         doc=f"{basic_unit_name} (basic unit) energy intensity",
