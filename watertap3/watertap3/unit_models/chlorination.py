@@ -1,105 +1,267 @@
 import os
-import numpy as np
-import pandas as pd
-from pyomo.environ import Expression, units as pyunits
-from watertap3.utils import financials, ml_regression
-from watertap3.core.wt3_unit_siso import WT3UnitProcessSISO
+import sys
+from copy import deepcopy
+from io import StringIO
 
-## REFERENCE: 
+from pyomo.environ import (
+    Param,
+    Var,
+    PositiveReals,
+    check_optimal_termination,
+    units as pyunits,
+)
+from pyomo.util.calc_var_value import calculate_variable_from_constraint as cvc
+
+import idaes.logger as idaeslog
+from idaes.core import declare_process_block_class
+from idaes.core.solvers.get_solver import get_solver
+from idaes.core.util.exceptions import InitializationError
+from idaes.core.surrogate.surrogate_block import SurrogateBlock
+from idaes.core.surrogate.pysmo_surrogate import PysmoSurrogate
+
+from watertap.costing.util import make_capital_cost_var
+
+from watertap3.core.wt3_unit_siso import WT3UnitProcessSISOData
+
+## REFERENCE:
 # CAPITAL: Table 3.23 - User's Manual for Integrated Treatment Train Toolbox - Potable Reuse (IT3PR) Version 2.0
+
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-chlorine_cost_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/chlorination_cost.csv"
-module_name = 'chlorination'
+__author__ = "Kurban Sitterley"
 
-class UnitProcess(WT3UnitProcessSISO):
+surrogate_file = (
+    os.path.abspath(os.path.join(__location__, os.pardir))
+    + "/surrogates/chlorination_surrogate.json"
+)
 
-    def fixed_cap(self):
-        '''
+module_name = "chlorination"
 
-        :param unit_params: Unit parameters from input sheet.
-        :return:
-        '''
 
-        time = self.flowsheet().config.time.first()
-        self.flow_in = pyunits.convert(self.flow_vol_in[time],
-            to_units=pyunits.Mgallons/pyunits.day)
-        try:
-            self.contact_time = self.unit_params['contact_time'] * pyunits.hour
-            self.contact_time_mins = pyunits.convert(self.contact_time,
-                to_units=pyunits.minute)
-            self.ct = self.unit_params['ct'] * ((pyunits.milligram * pyunits.minute)/(pyunits.liter))
-            self.chlorine_decay_rate = self.unit_params['chlorine_decay_rate'] * \
-                pyunits.milligram /(pyunits.liter*pyunits.hour)
-        except:
-            self.contact_time = 1.5  * pyunits.hour
-            self.contact_time_mins = pyunits.convert(self.contact_time, 
-                to_units=pyunits.minute)
-            self.ct = 450 * ((pyunits.milligram*pyunits.minute)/(pyunits.liter))
-            self.chlorine_decay_rate = 3.0  * (pyunits.milligram/(pyunits.liter*pyunits.hour))
-        try:
-            self.dose = round(float(self.unit_params['dose']), 1)
-        except:
-            self.dose = self.chlorine_decay_rate * self.contact_time + \
-                self.ct / self.contact_time_mins
-            self.dose = round(float(self.dose()), 1)
-        if self.dose > 25 or self.dose < 0.1:
-            print(f'\n\t**ALERT**\n\tInput chlorine dose of {self.dose} mg/L is invalid.')
-            print('\tCost curve valid only for chlorine dose 0.1 - 25 mg/L')
-            if self.dose > 25:
-                print('\tInput dose changed to 25 mg/L.\n')
-                self.dose = 25
-            if self.dose < 0.1:
-                print('\tInput dose changed to 0.1 mg/L.\n')
-                self.dose = 0.1
-        try:
-            self.chem_name = self.unit_params['chemical_name']
-        except:
-            self.chem_name = 'Chlorine'
-        self.chem_dict = {self.chem_name: self.dose * 1E-3}
-        self.df = df = pd.read_csv(chlorine_cost_file)
-        self.new_dose_list = new_dose_list = np.arange(0, 25.1, 0.1)
-        self.cost_list = cost_list = []
-        self.flow_list = flow_list = []
-        self.dose_list = dose_list = []
-        for flow in df.Flow_mgd.unique():
-            self.df_hold = df_hold = df[df.Flow_mgd == flow]
-            if 0 not in df_hold.Cost.values:
-                xs = np.hstack((0, df_hold.Dose.values))
-                ys = np.hstack((0, df_hold.Cost.values))
-            else:
-                xs = df_hold.Dose.values
-                ys = df_hold.Cost.values
-            a = ml_regression.get_cost_curve_coefs(xs=xs, ys=ys)[0][0]
-            b = ml_regression.get_cost_curve_coefs(xs=xs, ys=ys)[0][1]
-            for new_dose in new_dose_list:
-                if new_dose in df.Dose.to_list():
-                    if flow in df.Flow_mgd.to_list():
-                        cost_list.append(df[((df.Dose == new_dose) & (df.Flow_mgd == flow))].Cost.max())
-                    else:
-                        cost_list.append(a * new_dose ** b)
+def cost_chlorination(blk):
+
+    blk.basis_year = 2014
+    blk.basis_currency = getattr(pyunits, f"kUSD_{blk.basis_year}")
+
+    blk.energy_intensity = Var(
+        initialize=5e-5,
+        bounds=(0, None),
+        units=pyunits.kWh / pyunits.m**3,
+        doc="Chlorination energy intensity",
+    )
+
+    blk.fix_all_vars()
+
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, None)
+
+    blk.flow_mgd = Var(
+        initialize=1,
+        bounds=(0, None),
+        units=pyunits.Mgallons / pyunits.day,
+        doc="Flow in MGD for surrogate model",
+    )
+
+    blk.capital_cost_surrogate = Var(
+        initialize=1e3,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Capital cost from surrogate model",
+    )
+
+    stream = StringIO()
+    oldstdout = sys.stdout
+    sys.stdout = stream
+
+    blk.surrogate_blk = SurrogateBlock(concrete=True)
+    blk.surrogate = PysmoSurrogate.load_from_file(surrogate_file)
+    blk.surrogate_blk.build_model(
+        blk.surrogate,
+        input_vars=[blk.unit_model.dose, blk.flow_mgd],
+        output_vars=[blk.capital_cost_surrogate],
+    )
+    
+    sys.stdout = oldstdout
+
+    @blk.Constraint(doc="Flow in MGD conversion for surrogate model")
+    def flow_mgd_constraint(b):
+        return b.flow_mgd == pyunits.convert(
+            b.unit_model.properties_in.flow_vol,
+            to_units=pyunits.Mgallons / pyunits.day,
+        )
+    
+    @blk.Constraint(doc="Capital cost equation")
+    def capital_cost_constraint(b):
+        return b.capital_cost == pyunits.convert(
+            b.capital_cost_surrogate, to_units=b.costing_package.base_currency
+        )
+
+    @blk.Expression(doc="Power required")
+    def power_required(b):
+        return pyunits.convert(
+            b.energy_intensity * b.unit_model.properties_in.flow_vol,
+            to_units=pyunits.kilowatt,
+        )
+
+    blk.costing_package.cost_flow(blk.power_required, "electricity")
+    # TODO add chems
+    # self.chem_dict = {self.chem_name: self.dose * 1E-3}
+
+
+@declare_process_block_class("UnitProcess")
+class UnitProcessData(WT3UnitProcessSISOData):
+    def build(self):
+        super().build()
+
+        self.contact_time = Param(
+            initialize=1.5,
+            mutable=True,
+            domain=PositiveReals,
+            units=pyunits.hour,
+            doc="Contact time",
+        )
+        self.ct = Param(
+            initialize=450,
+            mutable=True,
+            domain=PositiveReals,
+            units=(pyunits.mg * pyunits.minute) / pyunits.liter,
+            doc="CT value",
+        )
+        self.decay_rate = Param(
+            initialize=5,
+            mutable=True,
+            domain=PositiveReals,
+            units=pyunits.mg / (pyunits.liter * pyunits.hour),
+            doc="Chlorine decay rate",
+        )
+
+        self.dose = Var(
+            initialize=5,
+            bounds=(0.1, 26),
+            units=pyunits.mg / pyunits.liter,
+            doc="Chlorine dose",
+        )
+
+        self.handle_unit_params()
+
+        if not self.dose.is_fixed():
+
+            @self.Constraint(doc="Chlorine dose equation")
+            def eq_chlorine_dose(b):
+                dose_a = b.decay_rate * b.contact_time
+                dose_b = pyunits.convert(
+                    b.ct / b.contact_time, to_units=pyunits.mg / pyunits.liter
+                )
+                return b.dose == pyunits.convert(
+                    dose_a + dose_b, to_units=pyunits.mg / pyunits.liter
+                )
+
+    def initialize_build(
+        self,
+        state_args=None,
+        outlvl=idaeslog.NOTSET,
+        solver=None,
+        optarg=None,
+    ):
+        """
+        General wrapper for initialization routines
+
+        Keyword Arguments:
+            state_args : a dict of arguments to be passed to the property
+                         package(s) to provide an initial state for
+                         initialization (see documentation of the specific
+                         property package) (default = {}).
+            outlvl : sets output level of initialization routine
+            optarg : solver options dictionary object (default=None)
+            solver : str indicating which solver to use during
+                     initialization (default = None)
+
+        Returns: None
+        """
+        # return
+        init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
+        solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
+
+        if solver is None:
+            opt = get_solver(solver, optarg)
+
+        # ---------------------------------------------------------------------
+        flags = self.properties_in.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args,
+            hold_state=True,
+        )
+        init_log.info("Initialization Step 1a Complete.")
+
+        # ---------------------------------------------------------------------
+        # Initialize other state blocks
+        # Set state_args from inlet state
+        if state_args is None:
+            self.state_args = state_args = {}
+            state_dict = self.properties_in.define_port_members()
+
+            for k in state_dict.keys():
+                if state_dict[k].is_indexed():
+                    state_args[k] = {}
+                    for m in state_dict[k].keys():
+                        state_args[k][m] = state_dict[k][m].value
                 else:
-                    cost_list.append(a * new_dose ** b)
-                dose_list.append(new_dose)
-                flow_list.append(flow)
-        self.dose_cost_table = dose_cost_table = pd.DataFrame()
-        dose_cost_table['flow_mgd'] = flow_list
-        dose_cost_table['dose'] = dose_list
-        dose_cost_table['cost'] = cost_list
-        self.df1 = df1 = dose_cost_table[dose_cost_table.dose == self.dose]
-        self.final_xs = np.hstack((0, df1.flow_mgd.values))
-        self.final_ys = np.hstack((0, df1.cost.values))
-        (self.final_a, self.final_b) = \
-            ml_regression.get_cost_curve_coefs(xs=self.final_xs, ys=self.final_ys)[0]
-        self.cl_cap = (self.final_a * self.flow_in ** self.final_b) * 1E-3
-        return self.cl_cap
+                    state_args[k] = state_dict[k].value
 
-    def get_costing(self):
-        '''
-        Initialize the unit in WaterTAP3.
-        '''
-        basis_year = 2014
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
-                doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=0.00005,
-                doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing, basis_year=basis_year)
+        self.state_args_out = state_args_out = deepcopy(state_args)
+        for k, v in state_args.items():
+            if k == "flow_vol":
+                state_args_out[k] == v
+            elif k == "conc_mass_comp":
+                state_args_out[k] == dict()
+                for j, u in v.items():
+                    state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
+
+        self.properties_out.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args_out,
+        )
+        init_log.info("Initialization Step 1b Complete.")
+
+        if not self.dose.is_fixed():
+            cvc(self.dose, self.eq_chlorine_dose)
+            
+        if hasattr(self, "costing"):
+            cvc(self.costing.flow_mgd, self.costing.flow_mgd_constraint)
+            self.costing.flow_mgd.fix()
+            self.costing.flow_mgd_constraint.deactivate()
+            cvc(
+                self.costing.capital_cost_surrogate,
+                self.costing.surrogate_blk.pysmo_constraint["capital_cost"],
+            )
+            self.costing.capital_cost_surrogate.fix()
+            self.costing.surrogate_blk.pysmo_constraint["capital_cost"].deactivate()
+            cvc(self.costing.capital_cost, self.costing.capital_cost_constraint)
+
+            init_log.info("Initialization Step 1c Complete.")
+
+        # Solve unit
+        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
+            res = opt.solve(self, tee=slc.tee)
+            if not check_optimal_termination(res):
+                init_log.warning(
+                    f"Trouble solving unit model {self.name}, trying one more time"
+                )
+                res = opt.solve(self, tee=slc.tee)
+                res = opt.solve(self, tee=slc.tee)
+
+        init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
+
+        # Release Inlet state
+        self.properties_in.release_state(flags, outlvl=outlvl)
+        init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
+
+        if not check_optimal_termination(res):
+            raise InitializationError(f"Unit model {self.name} failed to initialize.")
+
+    @property
+    def default_costing_method(self):
+        return cost_chlorination
