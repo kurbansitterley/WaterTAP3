@@ -13,8 +13,13 @@ class UnitProcessData(WT3UnitProcessPTData):
     def build(self):
         super().build()
 
+        if "pump" not in self.config.unit_params.keys() or not self.config.unit_params["pump"]:
+            self.has_pump = False
+        else:
+            self.has_pump = True
+
         self.piping_distance = Param(
-            initialize=1, mutable=True, units=pyunits.mile, doc="Piping distance"
+            initialize=10, mutable=True, units=pyunits.mile, doc="Piping distance"
         )
         self.piping_diameter = Param(
             initialize=8, mutable=True, units=pyunits.inch, doc="Piping diameter"
@@ -51,7 +56,8 @@ def cost_well_field(blk):
         doc="Piping cost basis",
     )
 
-    blk.add_pumping_energy()
+    if blk.unit_model.has_pump:
+        blk.add_pumping_energy()
     blk.handle_costing_unit_params()
 
     blk.fix_all_vars()

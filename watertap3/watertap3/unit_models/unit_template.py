@@ -15,6 +15,18 @@ module_name = 'unit'
 def cost_unit_model(blk):
     blk.basis_year = 2018
     blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
+    blk.capital_cost_base = Var(
+        initialize=123,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Unit capital cost basis",
+    )
+    blk.capital_cost_exp = Var(
+        initialize=0.7,
+        bounds=(0, None),
+        units=pyunits.dimensionless,
+        doc="Unit capital cost exponent",
+    )
     ## VARS GO HERE
     blk.handle_costing_unit_params()
     blk.fix_all_vars()

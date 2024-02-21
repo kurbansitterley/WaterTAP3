@@ -1,6 +1,7 @@
 from pyomo.environ import Var, Param, units as pyunits
 from idaes.core import declare_process_block_class
 from watertap.costing.util import make_capital_cost_var
+from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
 from watertap3.core.wt3_unit_siso import WT3UnitProcessSISOData
 
 ## REFERENCE
@@ -18,9 +19,8 @@ module_name = "iron_and_manganese_removal"
 
 
 def cost_iron_and_manganese_removal(blk):
-    unit_params = blk.unit_model.unit_params
 
-    blk.basis_year = 2018
+    blk.basis_year = 2014
     blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
 
     blk.flow_scaling_base = Var(
@@ -44,7 +44,7 @@ def cost_iron_and_manganese_removal(blk):
     blk.filter_capital_cost_slope = Var(
         initialize=38.319,
         bounds=(0, None),
-        units=blk.basis_currency / pyunits.ft,
+        units=blk.basis_currency / pyunits.ft**2,
         doc="Dual media filtration capital cost equation - slope",
     )
     blk.backwash_capital_cost_intercept = Var(
@@ -54,9 +54,9 @@ def cost_iron_and_manganese_removal(blk):
         doc="Backwashing system capital cost equation - intercept",
     )
     blk.backwash_capital_cost_slope = Var(
-        initialize=580,
+        initialize=292.44,
         bounds=(0, None),
-        units=blk.basis_currency / pyunits.ft,
+        units=blk.basis_currency / pyunits.ft**2,
         doc="Backwashing system capital cost equation - slope",
     )
     blk.energy_intensity_blower = Var(
@@ -72,9 +72,7 @@ def cost_iron_and_manganese_removal(blk):
         doc="Blower capital cost",
     )
 
-    for k, v in unit_params.items():
-        if hasattr(blk, k):
-            getattr(blk, k).fix(v)
+    blk.handle_costing_unit_params()
 
     blk.fix_all_vars()
 
@@ -126,7 +124,7 @@ def cost_iron_and_manganese_removal(blk):
     def capital_cost_base_constraint(b):
         return (
             b.capital_cost_base
-            == b.blower_capital_cost + b.filter_capital_cost + b.backwash_capital_cost
+            == b.costing_package.TPEC *(b.blower_capital_cost + b.filter_capital_cost + b.backwash_capital_cost)
         )
 
     @blk.Constraint(doc="Unit total capital cost")
@@ -134,7 +132,7 @@ def cost_iron_and_manganese_removal(blk):
         flow_m3_hr = pyunits.convert(
             b.unit_model.properties_in.flow_vol, to_units=pyunits.m**3 / pyunits.hr
         )
-        return b.capital_cost == pyunits.convert(
+        return b.capital_cost ==  pyunits.convert(
             b.capital_cost_base
             * (flow_m3_hr / b.flow_scaling_base) ** b.capital_cost_exp,
             to_units=b.costing_package.base_currency,
@@ -183,6 +181,12 @@ class UnitProcessData(WT3UnitProcessSISOData):
 
         self.handle_unit_params()
 
+    def calculate_scaling_factors(self):
+        super().calculate_scaling_factors()
+
+        if get_scaling_factor(self.air_flow_rate) is None:
+            set_scaling_factor(self.air_flow_rate, 1e4)
+            
     @property
     def default_costing_method(self):
         return cost_iron_and_manganese_removal

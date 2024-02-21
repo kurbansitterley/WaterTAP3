@@ -18,7 +18,7 @@ module_name = "storage_tank"
 
 def cost_storage_tank(blk):
     blk.basis_year = 1998
-    blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
+    blk.basis_currency = getattr(pyunits, f"MUSD_{blk.basis_year}")
 
     blk.capital_cost_base = Var(
         initialize=0.00344,

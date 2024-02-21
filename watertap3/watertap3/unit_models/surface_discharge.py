@@ -1,12 +1,67 @@
-from pyomo.environ import Expression, units as pyunits
-from watertap3.utils import financials
-from watertap3.core.wt3_unit_pt import WT3UnitProcessPT
-
-## REFERENCE:
+from pyomo.environ import Var, Constraint, Param, Expression, units as pyunits
+from idaes.core import declare_process_block_class
+from watertap.costing.util import make_capital_cost_var
+from watertap3.core.wt3_unit_pt import WT3UnitProcessPTData
+from watertap3.core.util.pumping_energy import pumping_energy
 
 module_name = 'surface_discharge'
 
-class UnitProcess(WT3UnitProcessPT):
+def cost_surface_discharge(blk):
+    blk.basis_year = 2020
+    blk.basis_currency = getattr(pyunits, f"MUSD_{blk.basis_year}")
+    
+    blk.flow_scaling_base = Var(
+        initialize=10417,
+        bounds=(0, None),
+        units=pyunits.m**3 / pyunits.hr,
+        doc="Flow scaling base",
+    )
+    blk.capital_cost_base = Var(
+        initialize=35,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Surface discharge capital cost basis",
+    )
+    blk.capital_cost_exp = Var(
+        initialize=0.9196,
+        bounds=(0, None),
+        units=pyunits.dimensionless,
+        doc="Surface discharge capital cost exponent",
+    )
+
+    if "pump" not in blk.unit_model.config.unit_params.keys() or blk.unit_model.config.unit_params["pump"]:
+        blk.add_pumping_energy()
+    blk.handle_costing_unit_params()
+
+    blk.fix_all_vars()
+
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, None)
+
+    @blk.Constraint(doc="Unit total capital cost")
+    def capital_cost_constraint(b):
+        flow_m3_hr = pyunits.convert(
+            b.unit_model.properties_in.flow_vol, to_units=pyunits.m**3 / pyunits.hr
+        )
+        return b.capital_cost == pyunits.convert(
+            b.capital_cost_base
+            * (flow_m3_hr / b.flow_scaling_base) ** b.capital_cost_exp,
+            to_units=b.costing_package.base_currency,
+        )
+
+@declare_process_block_class("SurfaceDischarge")
+class UnitProcessData(WT3UnitProcessPTData):
+
+    def build(self):
+        super().build()
+    
+    @property
+    def default_costing_method(self):
+        return cost_surface_discharge
+## REFERENCE:
+
+
+# class UnitProcess(WT3UnitProcessPT):
 
     def fixed_cap(self):
         self.pipe_cost_factor_dict = {

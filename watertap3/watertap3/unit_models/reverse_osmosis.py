@@ -4,6 +4,7 @@ from pyomo.environ import (
     NonNegativeReals,
     check_optimal_termination,
     Var,
+    value,
     units as pyunits,
 )
 from pyomo.network import Port
@@ -12,6 +13,7 @@ from pyomo.util.calc_var_value import calculate_variable_from_constraint as cvc
 import idaes.logger as idaeslog
 from idaes.core import declare_process_block_class
 from idaes.core.solvers.get_solver import get_solver
+from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
 
 from watertap.costing.util import make_capital_cost_var, make_fixed_operating_cost_var
 
@@ -26,7 +28,7 @@ __author__ = "Kurban Sitterley"
 
 def cost_reverse_osmosis(blk):
 
-    blk.basis_year = 2018
+    blk.basis_year = 2007
     blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
 
     blk.number_trains = Var(
@@ -110,7 +112,7 @@ def cost_reverse_osmosis(blk):
     )
 
     blk.fix_all_vars()
-    
+
     make_fixed_operating_cost_var(blk)
     make_capital_cost_var(blk)
     blk.costing_package.add_cost_factor(blk, "TIC")
@@ -161,14 +163,14 @@ def cost_reverse_osmosis(blk):
     def pump_power(b):
         return pyunits.convert(
             (
-                (b.unit_model.properties_in.pressure - b.unit_model.pressure_atm)
+                (b.unit_model.operating_pressure - b.unit_model.pressure_atm)
                 * b.unit_model.properties_in.flow_vol
             )
             / b.pump_efficiency,
             to_units=pyunits.watt,
         )
 
-    if blk.unit_model.config.unit_params["erd"] is True:
+    if blk.unit_model.has_erd:
 
         @blk.Expression(doc="ERD power")
         def erd_power(b):
@@ -271,6 +273,17 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         super().build()
 
+        self.properties_in.pressure.set_value(3e6)
+        self.properties_waste.pressure.set_value(5e6)
+
+        if (
+            "erd" not in self.config.unit_params.keys()
+            or not self.config.unit_params["erd"]
+        ):
+            self.has_erd = False
+        else:
+            self.has_erd = True
+
         self.pressure_atm = Param(
             initialize=101325,
             mutable=True,
@@ -333,19 +346,34 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             doc="Total membrane area",
         )
 
+        self.operating_pressure = Var(
+            initialize=1e6,
+            domain=NonNegativeReals,
+            bounds=(101325, 8e6),
+            units=pyunits.Pa,
+            doc="Operating pressure",
+        )
+
         @self.Expression(doc="Number membrane modules needed")
         def number_modules(b):
             return b.membrane_area / b.module_membrane_area
 
-        @self.Expression(doc="")
-        def operating_pressure(b):
-            return (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
+        # @self.Expression(doc="")
+        # def operating_pressure(b):
+        #     return (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
 
         @self.Expression(doc="")
         def avg_osmotic_pressure(b):
             return (
                 b.properties_in.pressure_osmotic + b.properties_waste.pressure_osmotic
             ) * 0.5 - b.properties_out.pressure_osmotic
+
+        @self.Constraint(doc="Operating presssure")
+        def eq_operating_pressure(b):
+            return (
+                b.operating_pressure
+                == (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
+            )
 
         @self.Constraint(doc="Permeate pressure")
         def eq_permeate_pressure(b):
@@ -394,8 +422,12 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             return b.properties_waste.pressure >= b.properties_waste.pressure_osmotic
 
         @self.Constraint(doc="Target water recovery")
-        def eq_target_water_recovery(b):
-            return b.water_recovery >= b.target_water_recovery
+        def eq_target_water_recovery_lb(b):
+            return b.water_recovery >= 0.95 * b.target_water_recovery
+
+        @self.Constraint(doc="Target water recovery")
+        def eq_target_water_recovery_ub(b):
+            return b.water_recovery <= 1.05 * b.target_water_recovery
 
         @self.Constraint(doc="Target permeate salinity")
         def eq_target_perm_salinity(b):
@@ -457,13 +489,18 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         self.state_args_out = state_args_out = deepcopy(state_args)
         for k, v in state_args.items():
-            if k == "flow_vol":
-                state_args_out[k] == v * 0.5
-            elif k == "conc_mass_comp":
-                # elif isinstance(v, dict):
-                state_args_out[k] == dict()
+            if k == "flow_mass_comp":
                 for j, u in v.items():
-                    state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
+                    if j == "H2O":
+                        state_args_out[k][j] = u * self.target_water_recovery.value
+                    else:
+                        rf = self.flowsheet().unit_removal_fractions[self.unit_name][j]
+                        state_args_out[k][j] = u * (1 - rf)
+            #     state_args_out[k] == v * 0.5
+            # elif k == "conc_mass_comp":
+            #     state_args_out[k] == dict()
+            #     for j, u in v.items():
+            #         state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
 
         self.properties_out.initialize(
             outlvl=outlvl,
@@ -475,13 +512,13 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         self.state_args_waste = state_args_waste = deepcopy(state_args)
         for k, v in state_args.items():
-            if k == "flow_vol":
-                state_args_waste[k] == v * 0.5
-            elif k == "conc_mass_comp":
-                # elif isinstance(v, dict):
-                state_args_waste[k] == dict()
+            if k == "flow_mass_comp":
                 for j, u in v.items():
-                    state_args_waste[k][j] = self.removal_fraction[j].value * u
+                    if j == "H2O":
+                        state_args_waste[k][j] = u * (1 - self.target_water_recovery.value)
+                    else:
+                        rf = self.flowsheet().unit_removal_fractions[self.unit_name][j]
+                        state_args_waste[k][j] = u * rf
 
         self.properties_waste.initialize(
             outlvl=outlvl,
@@ -511,10 +548,17 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         # if not check_optimal_termination(res):
         #     raise InitializationError(f"Unit model {self.name} failed to initialize.")
+        self.initialized = True
 
     def calculate_scaling_factors(self):
-        # TODO
-        pass
+        super().calculate_scaling_factors()
+
+        for p in [self.properties_in, self.properties_out, self.properties_waste]:
+            set_scaling_factor(p.pressure, 1e-5)
+            set_scaling_factor(p.pressure_osmotic, 1e-5)
+        set_scaling_factor(self.operating_pressure, 1e-5)
+        set_scaling_factor(self.membrane_area, 1e-4)
+        set_scaling_factor(self.deltaP_outlet, 1e-5)
 
     @property
     def default_costing_method(self):

@@ -8,6 +8,7 @@ from pyomo.environ import (
     Var,
     PositiveReals,
     check_optimal_termination,
+    value,
     units as pyunits,
 )
 from pyomo.util.calc_var_value import calculate_variable_from_constraint as cvc
@@ -18,6 +19,7 @@ from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.exceptions import InitializationError
 from idaes.core.surrogate.surrogate_block import SurrogateBlock
 from idaes.core.surrogate.pysmo_surrogate import PysmoSurrogate
+from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
 
 from watertap.costing.util import make_capital_cost_var
 
@@ -112,9 +114,9 @@ class UnitProcessData(WT3UnitProcessSISOData):
         super().build()
 
         if "chemical" in self.config.unit_params.keys():
-            self.chemical = self.config.unit_params["chemical"]
+            chemical = self.config.unit_params["chemical"]
         else:
-            self.chemical = "chlorine"
+            chemical = "chlorine"
 
         self.contact_time = Param(
             initialize=1.5,
@@ -146,6 +148,7 @@ class UnitProcessData(WT3UnitProcessSISOData):
         )
 
         self.handle_unit_params()
+        self.chemical = chemical
 
         if not self.dose.is_fixed():
 
@@ -265,6 +268,14 @@ class UnitProcessData(WT3UnitProcessSISOData):
 
         if not check_optimal_termination(res):
             raise InitializationError(f"Unit model {self.name} failed to initialize.")
+        
+        self.initialized = True
+
+
+    def calculate_scaling_factors(self):
+        super().calculate_scaling_factors()
+
+        set_scaling_factor(self.dose, value(self.dose)**-1)
 
     @property
     def default_costing_method(self):

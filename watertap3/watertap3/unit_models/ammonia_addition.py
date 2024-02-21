@@ -81,7 +81,7 @@ class UnitProcess(WT3UnitProcessPT):
         '''
         Initialize the unit in WaterTAP3.
         '''
-        basis_year = 2020
+        basis_year = 2007
         tpec_tic = 'TPEC'
         self.costing.fixed_cap_inv_unadjusted = Expression(expr=self.fixed_cap(),
                 doc='Unadjusted fixed capital investment')

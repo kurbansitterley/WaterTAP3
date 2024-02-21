@@ -24,13 +24,13 @@ def cost_cartridge_filtration(blk):
     blk.basis_currency = getattr(pyunits, f"MUSD_{blk.basis_year}")
 
     blk.capital_cost_base = Var(
-        initialize=0.2161,
+        initialize=0.72821,
         bounds=(0, None),
         units=blk.basis_currency,
         doc="Cartridge filtration capital cost basis",
     )
     blk.capital_cost_exp = Var(
-        initialize=0.7639,
+        initialize=0.5862,
         bounds=(0, None),
         units=pyunits.dimensionless,
         doc="Cartridge filtration capital cost exponent",
