@@ -32,6 +32,3 @@ def pumping_energy(blk):
         to_units=pyunits.kW)
     )
 
-    for k, v in unit_params.items():
-        if hasattr(blk, k):
-            getattr(blk, k).fix(v)
