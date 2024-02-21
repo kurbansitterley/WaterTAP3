@@ -2,11 +2,14 @@ import os
 import pandas as pd
 from pyomo.environ import Block, Var, Constraint, Expression, Param, units as pyunits
 from idaes.core import declare_process_block_class
+from idaes.core.util.constants import Constants
 from idaes.core.base.costing_base import (
     UnitModelCostingBlockData,
     register_idaes_currency_units,
 )
+from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
 from watertap.costing.costing_base import WaterTAPCostingBlockData
+from watertap3.utils.financials import get_ind_table
 
 __author__ = "Kurban Sitterley"
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -95,7 +98,7 @@ class WT3CostingData(WaterTAPCostingBlockData):
         self.TPEC = Var(
             initialize=3.4,
             units=pyunits.dimensionless,
-            doc=f"Total purchase equipment cost factor (TPEC)",
+            doc=f"Total purchased equipment cost factor (TPEC)",
         )
         self.TIC = Var(
             initialize=1.65,
@@ -103,7 +106,6 @@ class WT3CostingData(WaterTAPCostingBlockData):
             doc=f"Total installed cost factor (TIC)",
         )
         self.fix_all_vars()
-        # self.build_chem_params()
 
     def build_process_costs(self):
         # add total_captial_cost and total_operating_cost
@@ -206,18 +208,15 @@ class WT3CostingData(WaterTAPCostingBlockData):
         mat_block = Block(rule=build_rule)
         self.add_component(material, mat_block)
 
-from watertap3.utils.financials import get_ind_table
 
 
 @declare_process_block_class("WT3UnitCosting")
 class WT3UnitCostingData(UnitModelCostingBlockData):
     def build(self):
         super().build()
-        self.basis_year = None
 
     def cost_chemical_flow(self, **kwargs):
         self.cost_material_flow(**kwargs)
-        # return self.cost_material_flow
 
     def cost_material_flow(self, flow_rate=None, name=None):
         if flow_rate is None:
@@ -243,12 +242,65 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
         self.add_component(name, flow_expr)
 
         self.costing_package.cost_flow(flow_expr, mat)
+    
+    def handle_costing_unit_params(self):
+        for k, v in self.unit_model.config.unit_params.items():
+            if hasattr(self, k):
+                p = getattr(self, k)
+                if isinstance(p, Var):
+                    p.fix(v)
+                elif isinstance(p, Param):
+                    p.set_value(v)
+                else:
+                    raise ValueError(f"{k} in unit_params for {self.name} is for a {type(p)}" 
+                                     "but must be for a Var or Param."
+                                     f"Remove {k} from unit_params on the input sheet.")
+    
+    def add_pumping_energy(self, flow_rate=None, rho=None, lift_height=100):
+        
+        unit = self.unit_model
+        if flow_rate is None:
+            flow_rate = unit.properties_in.flow_vol
+        if rho is None:
+            rho = unit.properties_in.dens_mass
+
+        self.pump_efficiency = Var(
+            initialize=0.9,
+            bounds=(0, 1),
+            units=pyunits.dimensionless,
+            doc="Pump efficiency",
+        )
+        self.motor_efficiency = Var(
+            initialize=0.9,
+            bounds=(0, 1),
+            units=pyunits.dimensionless,
+            doc="Motor efficiency",
+        )
+
+        self.lift_height = Var(
+            initialize=lift_height, bounds=(1, 1e5), units=pyunits.feet, doc="Pump lift height"
+        )
+        self.power_required = Expression(
+            expr=pyunits.convert(
+                (flow_rate * rho * Constants.acceleration_gravity * self.lift_height)
+            
+            / (self.pump_efficiency * self.motor_efficiency),
+            to_units=pyunits.kW)
+        )
+
+        self.costing_package.cost_flow(self.power_required, "electricity")
+
+    def calculate_scaling_factors(self):
+        super().calculate_scaling_factors()
+
+        # for v in self.component_objects(Var, descend_into=False):
+        #     set_scaling_factor(v, 1e-5)
 
     def get_cost_indices(self):
-        if self.basis_year is None:
-            return
+        # if self.basis_year is None:
+        #     return
 
-        df = get_ind_table(self.basis_year)
+        df = get_ind_table(self.costing_package.basis_year)
         self.capital_factor = Param(
             initialize=df.loc[self.basis_year].capital_factor,
             mutable=True,
