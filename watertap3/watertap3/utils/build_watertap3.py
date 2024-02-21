@@ -1,5 +1,6 @@
 import ast
 import os
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -7,16 +8,18 @@ import pandas as pd
 from pyomo.environ import Block, ConcreteModel, Var
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
-
+from idaes.core.util.scaling import *
 from . import module_import
 
 # from .source_wt3 import Source
 from ..core.source_wt3 import Source
 from ..core.mixer_wt3 import Mixer
 from ..core.splitter_wt3 import Splitter
-from ..core.water_props import WT3ParameterBlock
+from ..core.wt3_property_package import WT3ParameterBlock
 from watertap3.core.wt3_unit_pt import WT3UnitProcessPT
 from watertap3.core.wt3_unit_siso import WT3UnitProcessSISOData
+from watertap3.core.wt3_unit_sido import WT3UnitProcessSIDOData
+from watertap3.unit_models.reverse_osmosis import ReverseOsmosis
 from ..costing import WT3Costing, WT3UnitCosting
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -33,10 +36,12 @@ water_recovery_file = (
     os.path.abspath(os.path.join(__location__, os.pardir))
     + "/data/water_recovery_factors.csv"
 )
+wr_df = pd.read_csv(water_recovery_file)
 constituent_removal_factors_file = (
     os.path.abspath(os.path.join(__location__, os.pardir))
     + "/data/constituent_removal_factors.csv"
 )
+crf_df = pd.read_csv(constituent_removal_factors_file)
 
 __all__ = [
     "watertap3_setup",
@@ -99,7 +104,7 @@ def watertap3_setup(
                 )
             ].copy()
             source_flow = source_df.loc["flow"].value
-        source_df.drop(source_df[source_df.index == "flow"].index, inplace=True)
+        # source_df.drop(source_df[source_df.index == "flow"].index, inplace=True)
         return source_flow, source_df
 
     case_study_print = case_study.replace("_", " ").swapcase()
@@ -186,7 +191,8 @@ def watertap3_setup(
     flow_dict = {}
 
     if isinstance(m.fs.source_water["water_type"], list):
-        m.fs.source_df = pd.DataFrame()
+        # m.fs.source_df = pd.DataFrame()
+        tmp = list()
         for water_type in m.fs.source_water["water_type"]:
             source_flow, source_df = get_source(
                 m.fs.source_water["reference"],
@@ -195,8 +201,9 @@ def watertap3_setup(
                 m.fs.source_water["scenario"],
             )
             flow_dict[water_type] = source_flow
-            m.fs.source_df = m.fs.source_df.append(source_df)
-
+            # m.fs.source_df = m.fs.source_df.append(source_df)
+            tmp.append(source_df)
+        m.fs.source_df = pd.concat(tmp)
     else:
         source_flow, source_df = get_source(
             m.fs.source_water["reference"],
@@ -211,6 +218,8 @@ def watertap3_setup(
         print(f"\nCase Study = {case_study_print}" f"\nScenario = {scenario_print}")
 
     m.fs.flow_in_dict = flow_dict
+    m.fs.unit_removal_fractions = dict()
+    m.fs.unit_water_recovery = dict()
     x = generate_constituent_list(m)
     # x += ["H2O"]
     m.fs.water = WT3ParameterBlock(constituent_list=x)
@@ -228,9 +237,7 @@ def get_case_study(m, new_df_units=None, print_it=True):
     m.fs.pfd_dict = pfd_dict = get_pfd_dict(m.fs.df_units)
 
     # if print_it:
-    print(
-        "\n=========================ADDING UNIT PROCESSES========================="
-    )
+    print("\n=========================ADDING UNIT PROCESSES=========================")
     for unit_process_name in pfd_dict.keys():
         unit = unit_process_name.replace("_", " ").swapcase()
         unit_process_type = pfd_dict[unit_process_name]["Unit"]
@@ -242,9 +249,10 @@ def get_case_study(m, new_df_units=None, print_it=True):
             unit_process_type=unit_process_type,
             unit_process_kind=unit_process_kind,
         )
-    print(
-        "=======================================================================\n"
-    )
+        # u = getattr(m.fs, unit_process_name)
+        # u.properties_in.flow_vol
+        # u.properties_in.conc_mass_comp[...]
+    print("=======================================================================\n")
     # else:
     #     for unit_process_name in pfd_dict.keys():
     #         unit = unit_process_name.replace("_", " ").swapcase()
@@ -260,7 +268,7 @@ def get_case_study(m, new_df_units=None, print_it=True):
     # create a dictionary with all the arcs in the network based on the pfd_dict
     m, arc_dict, arc_i = create_arc_dict(m, pfd_dict, m.fs.flow_in_dict)
     m.fs.arc_dict = arc_dict
-
+    # calculate_scaling_factors(m)
     # gets list of unit processes and ports that need either a splitter or mixer
     splitter_list, mixer_list = check_split_mixer_need(arc_dict)
     m.fs.splitter_list = splitter_list
@@ -282,8 +290,8 @@ def get_case_study(m, new_df_units=None, print_it=True):
 def add_unit_process(
     m=None, unit_process_name=None, unit_process_type=None, unit_process_kind=None
 ):
-
-    up_module = module_import.get_module(unit_process_type)
+    # print(unit_process_type)
+    UnitProcess = module_import.get_module(unit_process_type)
 
     unit_params = m.fs.pfd_dict[unit_process_name]["Parameter"]
     if not isinstance(unit_params, dict):
@@ -291,28 +299,33 @@ def add_unit_process(
 
     if unit_process_type == "basic_unit":
         setattr(
-            m.fs, unit_process_name, up_module.UnitProcess(property_package=m.fs.water, unit_params=unit_params)
+            m.fs,
+            unit_process_name,
+            UnitProcess(property_package=m.fs.water, unit_params=unit_params),
         )
         basic_unit_name = unit_params["unit_process_name"]
         m = create_wt3_unit(m, basic_unit_name, unit_process_name)
 
     else:
         setattr(
-            m.fs, unit_process_name, up_module.UnitProcess(property_package=m.fs.water, unit_params=unit_params)
+            m.fs,
+            unit_process_name,
+            UnitProcess(property_package=m.fs.water, unit_params=unit_params),
         )
         # if not isinstance(getattr(m.fs, unit_process_name), WT3UnitProcessPT):
         m = create_wt3_unit(m, unit_process_type, unit_process_name)
 
     unit = getattr(m.fs, unit_process_name)
-    unit.chem_dict = {}
-    # unit.costing = Block()
-    if isinstance(unit_params, float):
-        unit_params = {}
-    unit.unit_params = unit_params
+    # unit.chem_dict = {}
+
+    # unit.unit_params = unit_params
     unit.costing = WT3UnitCosting(flowsheet_costing_block=m.fs.costing)
+    # unit.costing.get_cost_indices()
 
     unit.unit_type = unit_process_type
     unit.unit_name = unit_process_name
+    unit.unit_kind = unit_process_kind
+    # TODO: set this in unit model file rather than here
     unit.unit_pretty_name = (
         unit_process_name.replace("_", " ")
         .title()
@@ -330,132 +343,141 @@ def add_unit_process(
         .replace("Co2", "CO2")
         .replace("Kmno4", "KMnO4")
     )
-    unit.unit_kind = unit_process_kind
 
     return m
 
 
-def add_water_source(
-    m=None, source_name=None, water_type=None, flow=None, link_to=None
-):
+def add_water_source(m=None, source_name=None, water_type=None, flow=None):
     setattr(m.fs, source_name, Source(property_package=m.fs.water))
-    # getattr(m.fs, source_name).set_source()
-    # getattr(m.fs, source_name).flow_vol_in.fix(flow)
+
     source = getattr(m.fs, source_name)
-    source.properties.flow_vol.fix(flow)
-    source.properties.flow_mass_comp[...]
+    # source.properties.flow_vol.fix(flow)
+    
+    # source.properties.flow_mass_comp[...]
     temp_source_df = m.fs.source_df[m.fs.source_df.water_type == water_type].copy()
-    train_constituent_list = list(source.config.property_package.solute_set)
-    for constituent_name in train_constituent_list:
+    train_constituent_list = list()
+    var_args = dict()
+    for constituent_name in source.config.property_package.component_list:
         # print(constituent_name)
+        # var_args[("conc_mass_comp", constituent_name)] = 0
         if constituent_name == "H2O":
-            continue 
+            var_args[("flow_vol", None)] = flow
+            source.properties.flow_mass_comp[constituent_name].set_value(1000 * flow)
             # source.properties.conc_mass_comp[constituent_name].set_value(1000)
         elif constituent_name in temp_source_df.index:
             conc = temp_source_df.loc[constituent_name].value
-            source.properties.conc_mass_comp[constituent_name].fix(conc)
+            var_args[("conc_mass_comp", constituent_name)] = conc
+            # source.properties.conc_mass_comp[constituent_name].fix(conc)
+            source.properties.flow_mass_comp[constituent_name].set_value(conc * flow)
         else:
-            source.properties.conc_mass_comp[constituent_name].fix(0)
-
+            pass
+            # source.properties.flow_mass_comp[constituent_name].fix(0)
+            # source.properties.conc_mass_comp[constituent_name].fix(0)
+    source.properties.flow_vol
+    source.properties.conc_mass_comp[...]
+    var_args[("pressure", None)] = 101325
+    source.properties.calculate_state(var_args=var_args, hold_state=True)
     return m
 
 
 def create_wt3_unit(m, unit_process_type, unit_process_name):
     def get_removal_factors():
         train = m.fs.train
-        df = pd.read_csv(constituent_removal_factors_file)
-        const_df = df[
-            (
-                (df.unit_process == unit_process_type)
-                & (df.scenario == "baseline")
-                & (df.reference == train["reference"])
+        conditions = (
+                (crf_df.unit_process == unit_process_type)
+                & (crf_df.scenario == "baseline")
+                & (crf_df.reference == train["reference"])
+                & (crf_df.case_study.isin(["default", train["case_study"]]))
             )
-        ].copy()
-        const_df = const_df[
-            (const_df.case_study == train["case_study"])
-            | (const_df.case_study == "default")
-        ].copy()
-        constituent_list = getattr(
-            m.fs, unit_process_name
-        ).config.property_package.component_list
-        removal_dict = {}
-        for constituent in constituent_list:
-            if constituent not in const_df.constituent.unique():
-                continue
-            if const_df[
-                (
-                    (const_df.case_study == train["case_study"])
-                    & (const_df.constituent == constituent)
-                )
-            ].empty:
-                rf = const_df[
-                    (
-                        (const_df.case_study == "default")
-                        & (const_df.constituent == constituent)
-                    )
+        df = crf_df[conditions].copy()
+        cl = getattr(m.fs, unit_process_name).config.property_package.solute_set
+        removal_dict = dict()
+        for c in cl:
+            # removal factor df specific to this case study and constituent
+            tmp = df[
+                ((df.case_study == train["case_study"]) & (df.constituent == c))
+            ].copy()
+            if c not in df.constituent.unique(): 
+                # if constituent isn't there, assume no removal
+                rf = 0
+            elif tmp.empty:
+                # if there are no removal factors for this constituent specific to this case study,
+                # use the default removal factor
+                rf = df[
+                    ((df.case_study == "default") & (df.constituent == c))
                 ].value.iloc[0]
-                removal_dict[constituent] = rf
             else:
-                rf = const_df[
-                    (
-                        (const_df.case_study == train["case_study"])
-                        & (const_df.constituent == constituent)
-                    )
-                ].value.iloc[0]
-                removal_dict[constituent] = rf
+                # use case study specific removal factor for this unit
+                rf = tmp.value.iloc[0]
+            removal_dict[c] = float(rf)
 
         return removal_dict
 
-    wr_df = pd.read_csv(water_recovery_file)
-    case_study_name = m.fs.train["case_study"]
-    scenario = m.fs.train["scenario"]
+    def get_water_recovery():
+
+        conditions = (
+            (wr_df.unit_process == unit_process_type)
+            & (wr_df.case_study == m.fs.train["case_study"])
+            & (wr_df.scenario == m.fs.train["scenario"])
+        )
+        unit_wr_df = wr_df[conditions].copy()
+        if unit_wr_df.empty:
+            # If not, we look for the default water recovery for this case study
+            conditions = (
+                (wr_df.unit_process == unit_process_type)
+                & (wr_df.case_study == m.fs.train["case_study"])
+                & (wr_df.scenario == "default")
+            )
+            unit_wr_df = wr_df[conditions].copy()
+            if unit_wr_df.empty:
+                # If not, we use the default water recovery for this unit
+                conditions = (
+                    (wr_df.unit_process == unit_process_type)
+                    & (wr_df.case_study == "default")
+                    & (wr_df.scenario == "default")
+                )
+                unit_wr_df = wr_df[conditions].copy()
+                if unit_wr_df.empty:
+                    raise ValueError(
+                        f"No default water recovery factor provided for {unit_process_type}."
+                        f"Please provide one in data/water_recovery_factors.csv."
+                    )
+
+        if len(unit_wr_df) == 1:
+            pass
+
+        elif len(unit_wr_df) > 1:
+            if not len(unit_wr_df.recovery.unique()) == 1:
+                raise ValueError(
+                    f"Can only specify one water recovery factor per unit in water_recovery.csv,\n"
+                    f"\tbut found {len(unit_wr_df)} for {unit_process_type}."
+                )
+            else:
+                # If there are two identical entries
+                unit_wr_df = unit_wr_df.iloc[0]
+
+        unit_wrf = unit_wr_df.recovery.iloc[0]
+        try:
+            unit_wrf = float(unit_wrf)
+            return unit_wrf
+        except ValueError:
+            print(f"water recovery unfixed for {unit_process_name}")
+            return None
+
     unit = getattr(m.fs, unit_process_name)
 
-    cases = wr_df[wr_df.unit_process == unit_process_type].case_study.to_list()
-    scenarios = wr_df[wr_df.unit_process == unit_process_type].scenario.to_list()
-    default_df = wr_df[
-        ((wr_df.unit_process == unit_process_type) & (wr_df.case_study == "default"))
-    ].recovery
-    tups = zip(cases, scenarios)
-
-    if not isinstance(unit, WT3UnitProcessSISOData):
-
-        if (case_study_name, scenario) in tups:
-            case_study_df = wr_df[
-                (
-                    (wr_df.unit_process == unit_process_type)
-                    & (wr_df.case_study == case_study_name)
-                    & (wr_df.scenario == scenario)
-                )
-            ]
-            if "calculated" not in case_study_df.recovery.max():
-                flow_recovery_factor = float(case_study_df.recovery)
-                getattr(m.fs, unit_process_name).water_recovery.fix(
-                    flow_recovery_factor
-                )
-        else:
-            pass
-            # if default_df.empty:
-            #     raise TypeError(f'There is no default water recovery for {unit_process_type}.\n'
-            #                     'Check that there is an entry for this unit in water_recovery.csv')
-            # if 'calculated' not in default_df.max():
-            #     flow_recovery_factor = float(default_df)
-            #     getattr(m.fs, unit_process_name).water_recovery.fix(flow_recovery_factor)
-
-    train_constituent_removal_factors = get_removal_factors()
+    if hasattr(unit, "water_recovery"):
+        unit_wrf = get_water_recovery()
+        if unit_wrf is not None:
+            unit.water_recovery.fix(unit_wrf)
+        m.fs.unit_water_recovery[unit_process_name] = unit_wrf
 
     if hasattr(unit, "removal_fraction"):
+        removal_dict = get_removal_factors()
+        m.fs.unit_removal_fractions[unit_process_name] = removal_dict
+        for c, rf in removal_dict.items():
+            unit.removal_fraction[c].fix(rf)
 
-        for constituent_name in unit.config.property_package.solute_set:
-
-            if constituent_name in train_constituent_removal_factors.keys():
-                unit.removal_fraction[constituent_name].fix(
-                    train_constituent_removal_factors[constituent_name]
-                )
-            # elif isinstance(unit, WT3UnitProcessSISOData):
-            #     unit.removal_fraction[constituent_name].fix(0)
-            else:
-                unit.removal_fraction[constituent_name].fix(0)
     return m
 
 
@@ -511,54 +533,22 @@ def create_arcs(m, arc_dict):
 
 def create_arc_dict(m, pfd_dict, flow):
     # create arc dictionary, add sources, add source to inlet arcs
-    arc_dict = {}
     arc_i = 1
-    for key in pfd_dict.keys():
-        # if the unit is an intake process
-        if pfd_dict[key]["Type"] == "intake":
-            num_sources = len(pfd_dict[key]["Parameter"]["water_type"])
-            num_unique_sources = len(
-                np.unique(pfd_dict[key]["Parameter"]["water_type"])
-            )
-
-            ### check if multiple sources with same name for 1 intake
-            if num_sources != num_unique_sources:
-                print("error: multiple sources with same name for 1 intake")
-
-            for water_type in pfd_dict[key]["Parameter"]["water_type"]:
-                source_name = water_type
-                water_type = water_type
-                source_flow = flow[source_name]
-
-                m = add_water_source(
-                    m=m,
-                    source_name=source_name,
-                    water_type=water_type,
-                    flow=source_flow,
-                )
-
-                arc_dict[arc_i] = [source_name, "outlet", key, "inlet"]
+    arc_dict = dict()
+    for u, d in pfd_dict.items():
+        if d["Type"] == "intake":
+            for water_type in d["Parameter"]["water_type"]:
+                m = add_water_source(m=m, source_name=water_type, water_type=water_type, flow=flow[water_type])
+                arc_dict[arc_i] = [water_type, "outlet", u, "inlet"]
                 arc_i += 1
-
-                # create arcs *for single streams* from .csv table.
-    for key in pfd_dict.keys():
-        if pfd_dict[key]["FromPort"] is not np.nan:
-            if isinstance(pfd_dict[key]["FromPort"], list):
-                for port_i in range(0, len(pfd_dict[key]["FromPort"])):
-                    arc_dict[arc_i] = [
-                        key,
-                        pfd_dict[key]["FromPort"][port_i],
-                        pfd_dict[key]["ToUnitName"][port_i],
-                        "inlet",
-                    ]
+    for u, d in pfd_dict.items():
+        if d["FromPort"] is not np.nan:
+            if isinstance(d["FromPort"], list):
+                for port_i in range(0, len(d["FromPort"])):
+                    arc_dict[arc_i] = [u, d["FromPort"][port_i], d["ToUnitName"][port_i], "inlet"]
                     arc_i += 1
             else:
-                arc_dict[arc_i] = [
-                    key,
-                    pfd_dict[key]["FromPort"],
-                    pfd_dict[key]["ToUnitName"],
-                    "inlet",
-                ]
+                arc_dict[arc_i] = [u, d["FromPort"], d["ToUnitName"], "inlet"]
                 arc_i += 1
 
     return m, arc_dict, arc_i
@@ -566,60 +556,49 @@ def create_arc_dict(m, pfd_dict, flow):
 
 def check_split_mixer_need(arc_dict):
     # check if a mixer or splitter is needed
-    mixer_list = []
-    splitter_list = []
-    unique_name_list1 = []
-    unique_name_list2 = []
 
-    for key in arc_dict.keys():
-        # FOR SPLITTER
-        if [arc_dict[key][0], arc_dict[key][1]] not in unique_name_list1:
-            unique_name_list1.append([arc_dict[key][0], arc_dict[key][1]])
-        else:
-            if [arc_dict[key][0], arc_dict[key][1]] not in splitter_list:
-                splitter_list.append([arc_dict[key][0], arc_dict[key][1]])
+    mixer_list = list() # (unit_name, inlet_port) pairs that need a mixer
+    splitter_list = list() # (unit_name, outlet_port) pairs that need a splitter
+    u1 = list() # unique (unit_name, inlet_port) pairs
+    u2 = list() # unique (unit_name, outlet_port) pairs
 
-        # FOR MIXER
-        if [arc_dict[key][2], arc_dict[key][3]] not in unique_name_list2:
-            unique_name_list2.append([arc_dict[key][2], arc_dict[key][3]])
-        else:
-            if [arc_dict[key][2], arc_dict[key][3]] not in mixer_list:
-                mixer_list.append([arc_dict[key][2], arc_dict[key][3]])
+    for (source, source_outlet, destination, destination_port) in arc_dict.values():
+        if [source, source_outlet] not in u1:
+            u1.append([source, source_outlet])
+        elif [source, source_outlet] not in splitter_list:
+                splitter_list.append([source, source_outlet])
+        
+        if [destination, destination_port] not in u2:
+            u2.append([destination, destination_port])
+        elif [destination, destination_port] not in mixer_list:
+                mixer_list.append([destination, destination_port])
+    
     return splitter_list, mixer_list
 
 
 def create_mixers(m, mixer_list, arc_dict, arc_i):
-    mixer_i = 1
     inlet_i = 1
-    for j in mixer_list:
-        inlet_list = []
+    mixer_i = 1
+    for mixer_i, (unit, port) in enumerate(mixer_list, 1):
+        inlet_list = list()
         mixer_name = f"mixer{mixer_i}"
-        for key in list(arc_dict.keys()):
-            if (arc_dict[key][2] == j[0]) & (arc_dict[key][3] == j[1]):
-
-                # inlet list for when mixer is added to model
+        # for k, v in arc_dict.items():
+        for k in list(arc_dict.keys()):
+            v = arc_dict[k]
+            if (v[2] == unit) & (v[3] == port):
                 inlet_name = f"inlet{inlet_i}"
                 inlet_list.append(inlet_name)
                 inlet_i += 1
-
-                # add new arc to arc dict
-                arc_dict[arc_i] = [
-                    arc_dict[key][0],
-                    arc_dict[key][1],
-                    mixer_name,
-                    inlet_name,
-                ]
+                arc_dict[arc_i] = [v[0], v[1], mixer_name, inlet_name]
                 arc_i += 1
-
-                # delete from arc dict
-                del arc_dict[key]
+                del arc_dict[k]
 
         # add mixer to model with inlet list
         mixer_config = dict(property_package=m.fs.water, inlet_list=inlet_list)
         setattr(m.fs, mixer_name, Mixer(**mixer_config))
 
         # arc from mixer outlet to node
-        arc_dict[arc_i] = [mixer_name, "outlet", j[0], j[1]]
+        arc_dict[arc_i] = [mixer_name, "outlet", unit, port]
         arc_i += 1
         mixer_i += 1
 
@@ -627,92 +606,47 @@ def create_mixers(m, mixer_list, arc_dict, arc_i):
 
 
 def create_splitters(m, splitter_list, arc_dict, arc_i):
-    splitter_i = 1
-    outlet_i = 1
-    m.fs.all_splitters = all_splitters = {}
-    for j in splitter_list:
-        splitter_unit = j[0]
-        splitter_port = j[1]
-        outlet_i = 1
-        outlet_list = []
-        outlet_dict = m.fs.outlet_dict = {}
-        splitter_name = f"splitter{splitter_i}"
-        all_splitters[splitter_name] = {
-            "from_unit": splitter_unit,
-            "to_units": list(
-                zip(
-                    m.fs.pfd_dict[splitter_unit]["ToUnitName"],
-                    m.fs.pfd_dict[splitter_unit]["FromPort"],
-                )
-            ),
-            # 'split_fraction': m.fs.pfd_dict[splitter_unit]['Parameter']['split_fraction'],
-            "indicator": False,
-        }
-        for key in list(arc_dict.keys()):
-            if (arc_dict[key][0] == splitter_unit) & (
-                arc_dict[key][1] == splitter_port
-            ):
-                split_dict = m.fs.split_dict = {}
-                w = 0
-                for uname in m.fs.pfd_dict[splitter_unit]["ToUnitName"]:
-                    if m.fs.pfd_dict[splitter_unit]["FromPort"][w] == "outlet":
-                        if (
-                            "split_fraction"
-                            in m.fs.pfd_dict[splitter_unit]["Parameter"]
-                        ):
-                            all_splitters[splitter_name][
-                                "split_fraction"
-                            ] = m.fs.pfd_dict[splitter_unit]["Parameter"][
-                                "split_fraction"
-                            ]
-                            split_dict[uname] = m.fs.pfd_dict[splitter_unit][
-                                "Parameter"
-                            ]["split_fraction"][w]
-                            w += 1
-                            split_fractions = m.fs.pfd_dict[splitter_unit]["Parameter"][
-                                "split_fraction"
-                            ]
-                            # if all(split == 1 for split in split_fractions):
-                            #     m.fs.choose = True
-                            #     unit_options[splitter_i] = {splitter_unit: list(split_dict.keys())}
-                            # else:
-                            #     m.fs.choose = False
 
-                            # outlet list for when splitter is added to model
+    splitter_i = 1
+    for splitter_i, (unit, port) in enumerate(splitter_list, 1):
+        outlet_i = 1
+        outlet_list = list()
+        outlet_dict = dict()
+        splitter_name = f"splitter{splitter_i}"
+        for k in list(arc_dict.keys()):
+            d = arc_dict[k]
+            if (d[0] == unit) & (d[1] == port):
+                split_dict = dict()
+                w = 0
+                for u in m.fs.pfd_dict[unit]["ToUnitName"]: 
+                    if m.fs.pfd_dict[unit]["FromPort"][w] == "outlet":
+                        if "split_fraction" in m.fs.pfd_dict[unit]["Parameter"]:
+                            split_dict[u] = m.fs.pfd_dict[unit]["Parameter"]["split_fraction"][w]
+                            w += 1
                 outlet_name = f"outlet_{outlet_i}"
                 outlet_list.append(outlet_name)
                 outlet_i += 1
-
-                # add new arc to arc dict
-                arc_dict[arc_i] = [
-                    splitter_name,
-                    outlet_name,
-                    arc_dict[key][2],
-                    arc_dict[key][3],
-                ]
+                arc_dict[arc_i] = [splitter_name, outlet_name, d[2], d[3]]
                 arc_i += 1
-
-                unit_hold = arc_dict[key][2]
-
-                if arc_dict[key][2] not in split_dict.keys():
-                    for l in m.fs.arc_dict.keys():
-                        if arc_dict[key][2] == m.fs.arc_dict[l][0]:
-                            unit_hold = m.fs.arc_dict[l][2]
-
+                
+                tmp = d[2]
+                if d[2] not in split_dict.keys():
+                    for x in arc_dict.keys():
+                        y = arc_dict[x]
+                        if d[2] == y[0]:
+                            tmp = y[2]
                 if len(split_dict) > 0:
-                    outlet_dict[outlet_name] = split_dict[unit_hold]
+                    outlet_dict[outlet_name] = split_dict[tmp]
                 else:
                     outlet_dict[outlet_name] = "NA"
-                # delete from arc dict
-                del arc_dict[key]
-
+                del arc_dict[k]
         setattr(
             m.fs,
             splitter_name,
             Splitter(property_package=m.fs.water, outlet_dict=outlet_dict),
         )
         setattr(m.fs, f"{splitter_name}_outlet_dict", outlet_dict)
-        arc_dict[arc_i] = [splitter_unit, splitter_port, splitter_name, "inlet"]
+        arc_dict[arc_i] = [unit, port, splitter_name, "inlet"]
         arc_i += 1
         splitter_i += 1
 
@@ -722,7 +656,7 @@ def create_splitters(m, splitter_list, arc_dict, arc_i):
 def add_waste_streams(m, arc_i, pfd_dict, mixer_i):
     # get number of units going to automatic waste disposal units
     i = 0
-    waste_inlet_list = []
+    m.fs.waste_inlet_list = waste_inlet_list = []
     unit_list = []
     for key in m.fs.pfd_dict.keys():
         unit_list.append(m.fs.pfd_dict[key]["Unit"])
