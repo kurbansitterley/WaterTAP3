@@ -94,8 +94,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     costing.labor_and_other_fixed = df.loc[basis_year].Labor_Factor
     costing.consumer_price_index = df.loc[basis_year].CPI_Factor
 
-    costing.fixed_cap_inv = ((costing.fixed_cap_inv_unadjusted * costing.cap_replacement_parts) * 
-            (1 - costing.fci_reduction)) * costing.fci_uncertainty
+    costing.fixed_cap_inv = (costing.fixed_cap_inv_unadjusted * costing.cap_replacement_parts) 
     costing.land_cost = costing.fixed_cap_inv * sys_specs.land_cost_percent_FCI
     costing.working_cap = costing.fixed_cap_inv * sys_specs.working_cap_percent_FCI
     costing.contingency = costing.fixed_cap_inv * sys_specs.contingency_cost_percent_FCI
@@ -148,7 +147,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
         (1 - costing.elect_intens_reduction)) * costing.elect_intens_uncertainty
     costing.electricity_cost = ((costing.electricity_intensity * \
         flow_in_m3yr * sys_specs.electricity_price * 1E-6) * 
-            sys_specs.plant_cap_utilization) * (1 - costing.elect_cost_reduction) * costing.elect_cost_uncertainty
+            sys_specs.plant_cap_utilization) 
 
     if not hasattr(costing, 'other_var_cost'):
         costing.other_var_cost = 0
@@ -157,17 +156,13 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
         costing.other_var_cost = (costing.other_var_cost * \
             (1 - costing.other_reduction)) * costing.other_uncertainty
 
-    costing.total_cap_investment = (costing.fixed_cap_inv + costing.land_cost + costing.working_cap) * \
-            (1 - costing.tci_reduction) * costing.tci_uncertainty
+    costing.total_cap_investment = (costing.fixed_cap_inv + costing.land_cost + costing.working_cap)
     costing.total_fixed_op_cost = ((costing.salaries + costing.benefits + 
-            costing.maintenance + costing.lab + costing.insurance_taxes) * 
-            (1 - costing.fixed_op_reduction)) * costing.fixed_op_uncertainty
+            costing.maintenance + costing.lab + costing.insurance_taxes))
     costing.annual_op_main_cost = ((costing.cat_and_chem_cost + costing.electricity_cost + 
-            costing.other_var_cost + costing.total_fixed_op_cost) * 
-            (1 - costing.annual_op_reduction)) * costing.annual_op_uncertainty
+            costing.other_var_cost + costing.total_fixed_op_cost)) 
     costing.total_operating_cost = ((costing.total_fixed_op_cost + costing.cat_and_chem_cost + 
-            costing.electricity_cost + costing.other_var_cost) * 
-            (1 - costing.total_op_reduction)) * costing.total_op_uncertainty
+            costing.electricity_cost + costing.other_var_cost) )
 
 
 def get_ind_table(analysis_yr_cost_indices):
@@ -182,22 +177,22 @@ def get_ind_table(analysis_yr_cost_indices):
 
     df1 = pd.DataFrame()
     for name in df.columns[1:]:
-        a, b = get_linear_regression(list(df.Year), list(df[('%s' % name)]), name)
+        a, b = get_linear_regression(list(df.year), list(df[(f'{name}')]), name)
         new_list = []
         yr_list = []
-        for yr in range(df.Year.max() + 1, last_year_for_cost_indicies + 1):
+        for yr in range(df.year.max() + 1, last_year_for_cost_indicies + 1):
             new_list.append(a * yr + b)
             yr_list.append(yr)
         df1[name] = new_list
-    df1['Year'] = yr_list
+    df1['year'] = yr_list
     df = pd.concat([df, df1], axis=0)
 
-    new_cost_variables = ['Capital', 'CatChem', 'Labor', 'CPI']
+    new_cost_variables = ['capital', 'chemical', 'labor']
     for variable in new_cost_variables:
-        ind_name = '%s_Index' % variable
-        fac_name = '%s_Factor' % variable
-        df[fac_name] = (df[df.Year == analysis_yr_cost_indices][ind_name].max() / df[ind_name])
-    df = df.set_index(df.Year)
+        ind_name = '%s_index' % variable
+        fac_name = '%s_factor' % variable
+        df[fac_name] = (df[df.year == analysis_yr_cost_indices][ind_name].max() / df[ind_name])
+    df = df.set_index(df.year)
     df = df.replace(1.0, 1.00000000001)
 
     return df
@@ -306,68 +301,6 @@ def get_system_costing(m_fs):
             electricity_cost_lst.append(b_unit.costing.electricity_cost)
             other_var_cost_lst.append(b_unit.costing.other_var_cost)
             total_fixed_op_cost_lst.append(b_unit.costing.total_fixed_op_cost)
-
-    b.sys_tci_reduction = Var(
-        initialize=0,
-        doc='System TCI reduction factor')
-
-    b.sys_catchem_reduction = Var(
-        initialize=0,
-        doc='System catalyst/chemical cost reduction factor')
-
-    b.sys_elect_reduction = Var(
-        initialize=0,
-        doc='System electricity cost reduction factor')
-
-    b.sys_other_reduction = Var(
-        initialize=0,
-        doc='System other cost reduction factor')
-
-    b.sys_fixed_op_reduction = Var(
-        initialize=0,
-        doc='System fixed O&M reduction factor')
-
-    b.sys_total_op_reduction = Var(
-        initialize=0,
-        doc='System total O&M reduction factor')
-
-    b.sys_tci_reduction.fix(0)
-    b.sys_catchem_reduction.fix(0)
-    b.sys_elect_reduction.fix(0)
-    b.sys_other_reduction.fix(0)
-    b.sys_fixed_op_reduction.fix(0)
-    b.sys_total_op_reduction.fix(0)
-
-    b.sys_tci_uncertainty = Var(
-        initialize=1,
-        doc='System TCI uncertainty factor')
-
-    b.sys_catchem_uncertainty = Var(
-        initialize=1,
-        doc='System catalyst/chemical cost uncertainty factor')
-
-    b.sys_elect_uncertainty = Var(
-        initialize=1,
-        doc='System electricity cost uncertainty factor')
-
-    b.sys_other_uncertainty = Var(
-        initialize=1,
-        doc='System other cost uncertainty factor')
-
-    b.sys_fixed_op_uncertainty = Var(
-        initialize=1,
-        doc='System fixed O&M uncertainty factor')
-
-    b.sys_total_op_uncertainty = Var(
-        initialize=1,
-        doc='System total O&M uncertainty factor')
-
-    b.sys_tci_uncertainty.fix(1)
-    b.sys_catchem_uncertainty.fix(1)
-    b.sys_elect_uncertainty.fix(1)
-    b.sys_other_uncertainty.fix(1)
-    b.sys_fixed_op_uncertainty.fix(1)
-    b.sys_total_op_uncertainty.fix(1)
 
     b.cat_and_chem_cost_annual = Expression(expr=
         (sum(cat_and_chem_cost_lst) * (1 - b.sys_catchem_reduction)) * b.sys_catchem_uncertainty)
