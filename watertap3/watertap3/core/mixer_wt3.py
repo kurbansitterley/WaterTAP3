@@ -127,6 +127,7 @@ linked to all inlet states and the mixed state,
         """ """
         # Call super.build()
         super().build()
+        self.initialized = False
         tmp_dict = dict(**self.config.property_package_args)
         tmp_dict["has_phase_equilibrium"] = False
         tmp_dict["parameters"] = self.config.property_package
@@ -140,9 +141,9 @@ linked to all inlet states and the mixed state,
 
         self.add_port_objects()
 
-        @self.Constraint(doc="Overall flow balance")
-        def flow_balance(b):
-            return prop_out.flow_vol == sum(ib.flow_vol for ib in b.inlet_blocks)
+        # @self.Constraint(doc="Overall flow balance")
+        # def flow_balance(b):
+        #     return prop_out.flow_vol == sum(ib.flow_vol for ib in b.inlet_blocks)
 
         @self.Constraint(
             self.config.property_package.solute_set,
@@ -236,58 +237,24 @@ linked to all inlet states and the mixed state,
             None
         """
         if self.config.construct_ports is True:
+            self.inlet_ports = list()
 
             for i, b in zip(self.inlet_list, self.inlet_blocks):
                 tmp_port = Port(noruleinit=True, doc=f"{i.title()} Port")
                 setattr(self, i, tmp_port)
+                tmp_port.add(b.flow_mass_comp, "flow_mass")
                 # tmp_port.add(b.pressure, "pressure")
                 # tmp_port.add(b.temperature, "temperature")
-                tmp_port.add(b.conc_mass_comp, "conc_mass")
-                tmp_port.add(b.flow_vol, "flow_vol")
+                # tmp_port.add(b.conc_mass_comp, "conc_mass")
+                # tmp_port.add(b.flow_vol, "flow_vol")
+                self.inlet_ports.append(tmp_port)
 
             self.outlet = Port(noruleinit=True, doc="Outlet Port")
-            self.outlet.add(self.properties_out.flow_vol, "flow_vol")
-            self.outlet.add(self.properties_out.conc_mass_comp, "conc_mass")
+            self.outlet.add(self.properties_out.flow_mass_comp, "flow_mass")
+            # self.outlet.add(self.properties_out.flow_vol, "flow_vol")
+            # self.outlet.add(self.properties_out.conc_mass_comp, "conc_mass")
             # self.outlet.add(self.properties_out.temperature, "temperature")
             # self.outlet.add(self.properties_out.pressure, "pressure")
-
-    def model_check(self):
-        """
-        This method executes the model_check methods on the associated state
-        blocks (if they exist). This method is generally called by a unit model
-        as part of the unit's model_check method.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        # Try property block model check
-        for t in self.flowsheet().config.time:
-            try:
-                inlet_list = self.create_inlet_list()
-                for i in inlet_list:
-                    i_block = getattr(self, i + "_state")
-                    i_block.model_check()
-            except AttributeError:
-                _log.warning(
-                    "{} Mixer1 inlet property block has no model "
-                    "checks. To correct this, add a model_check "
-                    "method to the associated StateBlock class.".format(self.name)
-                )
-            try:
-                if self.config.mixed_state_block is None:
-                    self.mixed_state.model_check()
-                else:
-                    self.config.mixed_state_block.model_check()
-            except AttributeError:
-                _log.warning(
-                    "{} Mixer1 outlet property block has no "
-                    "model checks. To correct this, add a "
-                    "model_check method to the associated "
-                    "StateBlock class.".format(self.name)
-                )
 
     def initialize_build(
         self,
@@ -376,3 +343,13 @@ linked to all inlet states and the mixed state,
         for i, ib in zip(self.inlet_list, self.inlet_blocks):
             ib.release_state(flags[i], outlvl=outlvl)
         init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
+
+        self.initialized = True
+
+    def calculate_scaling_facors(self):
+        super().calculate_scaling_factors()
+
+        # for b in self.inlet_blocks:
+
+
+

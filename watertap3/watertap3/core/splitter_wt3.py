@@ -88,6 +88,8 @@ class SplitterProcessData(UnitModelBlockData):
     def build(self):
         super().build()
 
+        self.initialized = False
+
         self.split_fraction_vars = []
         tmp_dict = dict(**self.config.property_package_args)
         tmp_dict["has_phase_equilibrium"] = False
@@ -98,11 +100,13 @@ class SplitterProcessData(UnitModelBlockData):
         )
 
         self.inlet = Port(noruleinit=True, doc="Inlet Port")
-        self.inlet.add(prop_in.flow_vol, "flow_vol")
-        self.inlet.add(prop_in.conc_mass_comp, "conc_mass")
+        self.inlet.add(prop_in.flow_mass_comp, "flow_mass")
+        # self.inlet.add(prop_in.flow_vol, "flow_vol")
+        # self.inlet.add(prop_in.conc_mass_comp, "conc_mass")
         # self.inlet.add(prop_in.temperature, "temperature")
         # self.inlet.add(prop_in.pressure, "pressure")
         self.outlet_blocks = list()
+        self.outlet_ports = list()
         for outlet, split in self.config.outlet_dict.items():
             tmp_port = Port(noruleinit=True, doc=f"{outlet.title()} Port")
             tmp_prop = self.config.property_package.state_block_class(
@@ -132,22 +136,25 @@ class SplitterProcessData(UnitModelBlockData):
 
             self.split_fraction_vars.append(tmp_split_var)
             self.outlet_blocks.append(tmp_prop)
+            self.outlet_ports.append(tmp_port)
 
-            tmp_port.add(tmp_prop.conc_mass_comp, "conc_mass")
-            tmp_port.add(tmp_prop.flow_vol, "flow_vol")
+            tmp_port.add(tmp_prop.flow_mass_comp, "flow_mass")
+            # tmp_port.add(tmp_prop.conc_mass_comp, "conc_mass")
+            # tmp_port.add(tmp_prop.flow_vol, "flow_vol")
             # tmp_port.add(tmp_prop.temperature, "temperature")
             # tmp_port.add(tmp_prop.pressure, "pressure")
 
             @tmp_prop.Constraint(
-                self.config.property_package.solute_set,
+                self.config.property_package.component_list,
                 doc=f"Component balance for {outlet}",
             )
             def component_mass_balance(b, j):
-                return prop_in.conc_mass_comp[j] == b.conc_mass_comp[j]
+                # return prop_in.conc_mass_comp[j] == b.conc_mass_comp[j]
+                return tmp_split_var * prop_in.flow_mass_comp[j] == b.flow_mass_comp[j]
 
-            @tmp_prop.Constraint(doc=f"Flow split for {outlet}")
-            def flow_split(b):
-                return tmp_split_var * prop_in.flow_vol == b.flow_vol
+            # @tmp_prop.Constraint(doc=f"Flow split for {outlet}")
+            # def flow_split(b):
+            #     return tmp_split_var * prop_in.flow_vol == b.flow_vol
 
             # @tmp_prop.Constraint(doc=f"Isothermal for {outlet}")
             # def isothermal_split(b):
@@ -252,3 +259,5 @@ class SplitterProcessData(UnitModelBlockData):
         init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
         self.properties_in.release_state(flags, outlvl=outlvl)
         init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
+
+        self.initialized = True

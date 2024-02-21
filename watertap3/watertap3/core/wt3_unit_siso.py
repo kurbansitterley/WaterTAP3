@@ -7,7 +7,8 @@ import idaes.logger as idaeslog
 from idaes.core import declare_process_block_class
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.exceptions import InitializationError
-from pyomo.environ import check_optimal_termination, Var, units as pyunits
+from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
+from pyomo.environ import check_optimal_termination, Var, value, units as pyunits
 from pyomo.network import Port
 from .wt3_unit_base import WT3UnitProcessBaseData
 
@@ -48,7 +49,7 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
         # self.deltaP.fix(0)
 
         self.removal_fraction = Var(
-            self.config.property_package.component_list,
+            self.config.property_package.solute_set,
             initialize=0.01,
             bounds=(0, 1),
             units=pyunits.dimensionless,
@@ -61,7 +62,7 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
 
         @self.Constraint(doc="Overall flow balance")
         def flow_balance(b):
-            return prop_in.flow_vol == prop_out.flow_vol
+            return prop_in.flow_mass_comp["H2O"] == prop_out.flow_mass_comp["H2O"]
 
         @self.Constraint(
             self.config.property_package.solute_set,
@@ -77,16 +78,18 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
         #     return prop_in.temperature == prop_out.temperature
         
         self.inlet = Port(noruleinit=True, doc='Inlet Port')
+        self.inlet.add(prop_in.flow_mass_comp, 'flow_mass')
         self.inlet.add(prop_in.flow_vol, 'flow_vol')
         self.inlet.add(prop_in.conc_mass_comp, 'conc_mass')
         # self.inlet.add(prop_in.temperature, 'temperature')
-        # self.inlet.add(prop_in.pressure, 'pressure')
+        self.inlet.add(prop_in.pressure, 'pressure')
 
         self.outlet = Port(noruleinit=True, doc='Outlet Port')
+        self.outlet.add(prop_in.flow_mass_comp, 'flow_mass')
         self.outlet.add(prop_out.flow_vol, 'flow_vol')
         self.outlet.add(prop_out.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop_out.temperature, 'temperature')
-        # self.outlet.add(prop_out.pressure, 'pressure')
+        self.outlet.add(prop_out.pressure, 'pressure')
 
 
     def initialize_build(
@@ -178,3 +181,50 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
 
         if not check_optimal_termination(res):
             raise InitializationError(f"Unit model {self.name} failed to initialize.")
+        
+        self.initialized = True
+    
+    def calculate_scaling_factors(self):
+        super().calculate_scaling_factors()
+        
+        # sf_q = value(self.properties_in.flow_vol) **-1
+        # set_scaling_factor(self.properties_in.flow_vol, sf_q)
+        # set_scaling_factor(self.properties_out.flow_vol, sf_q)
+
+        # for j in self.config.property_package.solute_set:
+        #     sf_rem = value(self.removal_fraction[j])
+        #     set_scaling_factor(self.removal_fraction[j], sf_rem)
+
+        #     sf_c_in = value(self.properties_in.conc_mass_comp[j]) **-1
+        #     set_scaling_factor(self.properties_in.conc_mass_comp[j], sf_c_in)
+
+        #     sf_c_out = value((1 - self.removal_fraction[j]) * self.properties_in.conc_mass_comp[j])**-1
+        #     set_scaling_factor(self.properties_out.conc_mass_comp[j], sf_c_out)
+        #     if self.properties_in.is_property_constructed("flow_mass_comp"):
+        #         sf_m_in = sf_q * sf_c_in
+        #         set_scaling_factor(self.properties_in.flow_mass_comp[j], sf_m_in)
+        #         sf_m_out = sf_q * sf_c_out
+        #         set_scaling_factor(self.properties_out.flow_mass_comp[j], sf_m_out)
+        #     if self.properties_in.is_property_constructed("mass_frac_comp"):
+        #         # print(f"\n\n\nmass_frac_comp for {self.name}\n\n\n ")
+        #         sf_mf_in = value(self.properties_in.flow_mass_comp[j] / self.properties_in.flow_mass_comp['H2O'])**-1
+        #         sf_mf_out = value(self.properties_out.flow_mass_comp[j] / self.properties_out.flow_mass_comp["H2O"])**-1
+        #         set_scaling_factor(self.properties_in.mass_frac_comp[j], sf_mf_in)
+        #         set_scaling_factor(self.properties_out.mass_frac_comp[j], sf_mf_out)
+        
+        # if self.properties_in.is_property_constructed("flow_mass_comp"):
+        #     sf = value(self.properties_in.dens_mass * self.properties_in.flow_vol)**-1
+        #     set_scaling_factor(self.properties_in.flow_mass_comp["H2O"], sf)
+        #     set_scaling_factor(self.properties_out.flow_mass_comp["H2O"], sf)
+        # if self.properties_in.is_property_constructed("mass_frac_comp"):
+        #     set_scaling_factor(self.properties_in.mass_frac_comp["H2O"], 1)
+        #     set_scaling_factor(self.properties_out.mass_frac_comp["H2O"], 1)
+
+
+        # # for p in [self.properties_in, self.properties_out]:
+        # #     set_scaling_factor(p.flow_vol, value(p.flow_vol)**-1)
+        # #     for j in self.config.property_package.solute_set:
+        # #         set_scaling_factor(p.conc_mass_comp[j], value(p.conc_mass_comp[j])**-1)
+        # #         if p.is_property_constructed("flow_mass_comp"):
+        # #             sf = value(p.flow_vol * p.conc_mass_comp[j]) **-1
+        # #             set_scaling_factor(p.flow_mass_comp[j], sf)

@@ -9,7 +9,8 @@
 import idaes.logger as idaeslog
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.exceptions import InitializationError
-from pyomo.environ import check_optimal_termination
+from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
+from pyomo.environ import check_optimal_termination, value
 from pyomo.network import Port
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
@@ -74,6 +75,7 @@ class SourceData(UnitModelBlockData):
 
     def build(self):
         super().build()
+        self.initialized = False
         tmp_dict = dict(**self.config.property_package_args)
         tmp_dict["has_phase_equilibrium"] = False
         tmp_dict["parameters"] = self.config.property_package
@@ -83,10 +85,11 @@ class SourceData(UnitModelBlockData):
         )
         
         self.outlet = Port(noruleinit=True, doc='Source Port')
+        self.outlet.add(prop.flow_mass_comp, "flow_mass")
         self.outlet.add(prop.flow_vol, 'flow_vol')
         self.outlet.add(prop.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop.temperature, 'temperature')
-        # self.outlet.add(prop.pressure, 'pressure')
+        self.outlet.add(prop.pressure, 'pressure')
 
 
     def initialize_build(
@@ -112,26 +115,9 @@ class SourceData(UnitModelBlockData):
         Returns: None
         """
         init_log = idaeslog.getInitLogger(self.name, outlvl, tag="unit")
-        solve_log = idaeslog.getSolveLogger(self.name, outlvl, tag="unit")
 
-        if solver is None:
-            opt = get_solver(solver, optarg)
-
-        # ---------------------------------------------------------------------
-        flags = self.properties.initialize(
-            outlvl=outlvl,
-            optarg=optarg,
-            solver=solver,
-            state_args=state_args,
-            hold_state=True,
-        )
-        init_log.info("Initialization Step 1 Complete.")
-
-        # ---------------------------------------------------------------------
-        # Initialize other state blocks
-        # Set state_args from inlet state
         if state_args is None:
-            self.state_args = state_args = {}
+            state_args = {}
             state_dict = self.properties.define_port_members()
 
             for k in state_dict.keys():
@@ -141,22 +127,30 @@ class SourceData(UnitModelBlockData):
                         state_args[k][m] = state_dict[k][m].value
                 else:
                     state_args[k] = state_dict[k].value
+        
+        self.properties.initialize(
+            outlvl=outlvl,
+            optarg=optarg,
+            solver=solver,
+            state_args=state_args,
+            hold_state=True,
+        )
 
-        # Solve unit
-        with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
-            res = opt.solve(self, tee=slc.tee)
-            if not check_optimal_termination(res):
-                init_log.warning(
-                    f"Trouble solving unit model {self.name}, trying one more time"
-                )
-                res = opt.solve(self, tee=slc.tee)
+        init_log.info("Initialization Complete")
+        
+        self.initialized = True
 
-        init_log.info("Initialization Step 2 {}.".format(idaeslog.condition(res)))
+    def calculate_scaling_factors(self):
+        super().calculate_scaling_factors()
 
-        # Release Inlet state
-        self.properties.release_state(flags, outlvl=outlvl)
-        init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
+        set_scaling_factor(self.properties.flow_vol, value(self.properties.flow_vol)**-1)
+        for j in self.config.property_package.solute_set:
+            set_scaling_factor(self.properties.conc_mass_comp[j], value(self.properties.conc_mass_comp[j])**-1)
+            if self.properties.is_property_constructed("flow_mass_comp"):
+                sf = value(self.properties.flow_vol * self.properties.conc_mass_comp[j]) **-1
+                set_scaling_factor(self.properties.flow_mass_comp[j], sf)
+        
 
-        if not check_optimal_termination(res):
-            raise InitializationError(f"Unit model {self.name} failed to initialize.")
-
+        if self.properties.is_property_constructed("flow_mass_comp"):
+            sf = value(self.properties.flow_vol * self.properties.dens_mass) **-1
+            set_scaling_factor(self.properties.flow_mass_comp["H2O"], sf)
