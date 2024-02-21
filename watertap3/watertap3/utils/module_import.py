@@ -43,8 +43,8 @@ def get_module(module_name):
     # if module_name == 'caustic_soda_addition':
     #     from watertap3.unit_models.caustic_soda_addition as up
 
-    # if module_name == 'chemical_addition':
-    #     from watertap3.unit_models.chemical_addition as up
+    if module_name == 'chemical_addition':
+        from watertap3.unit_models.chemical_addition import ChemicalAddition as up
 
     if module_name == 'chlorination':
         from watertap3.unit_models.chlorination import Chlorination as up
@@ -76,8 +76,8 @@ def get_module(module_name):
     # if module_name == 'drum_screen':
     #     from watertap3.unit_models.drum_screen as up
 
-    # if module_name == 'electrodialysis_reversal':
-    #     from watertap3.unit_models.electrodialysis_reversal as up
+    if module_name == 'electrodialysis_reversal':
+        from watertap3.unit_models.electrodialysis_reversal import ElectrodialysisReversal as up
 
     # if module_name == 'evaporation_pond':
     #     from watertap3.unit_models.evaporation_pond as up
@@ -115,8 +115,8 @@ def get_module(module_name):
     # if module_name == 'heap_leaching':
     #     from watertap3.unit_models.heap_leaching as up
 
-    # if module_name == 'hydrochloric_acid_addition':
-    #     from watertap3.unit_models.hydrochloric_acid_addition as up
+    if module_name == 'hydrochloric_acid_addition':
+        from watertap3.unit_models.hydrochloric_acid_addition import HClAddition as up
 
     # if module_name == 'ion_exchange':
     #     from watertap3.unit_models.ion_exchange as up
@@ -150,6 +150,8 @@ def get_module(module_name):
 
     # if module_name == 'multi_stage_bubble_aeration':
     #     from watertap3.unit_models.multi_stage_bubble_aeration as up
+    if module_name == 'raw_water_pumping_station':
+        from watertap3.unit_models.raw_water_pumping_station import RawWaterPumpingStation as up
 
     if module_name == 'treated_water_pumping_station':
         from watertap3.unit_models.treated_water_pumping_station import TreatedWaterPumpingStation as up
@@ -196,8 +198,8 @@ def get_module(module_name):
     # if module_name == 'sulfuric_acid_addition':
     #     from watertap3.unit_models.sulfuric_acid_addition as up
 
-    # if module_name == 'surface_discharge':
-    #     from watertap3.unit_models.surface_discharge as up
+    if module_name == 'surface_discharge':
+        from watertap3.unit_models.surface_discharge import SurfaceDischarge as up
 
     # if module_name == 'sw_onshore_intake':
     #     from watertap3.unit_models.sw_onshore_intake as up
