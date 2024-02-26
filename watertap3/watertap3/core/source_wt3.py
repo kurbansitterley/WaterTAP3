@@ -10,7 +10,7 @@ import idaes.logger as idaeslog
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.exceptions import InitializationError
 from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
-from pyomo.environ import check_optimal_termination, value
+from pyomo.environ import Expression, check_optimal_termination, value, units as pyunits
 from pyomo.network import Port
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
@@ -79,17 +79,22 @@ class SourceData(UnitModelBlockData):
         tmp_dict = dict(**self.config.property_package_args)
         tmp_dict["has_phase_equilibrium"] = False
         tmp_dict["parameters"] = self.config.property_package
-        tmp_dict["defined_state"] = True
+        tmp_dict["defined_state"] = False
         self.properties = prop = self.config.property_package.state_block_class(
             doc="Material properties of source", **tmp_dict
         )
+
+        # prop.pressure.fix()
+        prop.flow_vol
+        self.flow_mgd = Expression(expr=pyunits.convert(self.properties.flow_vol, to_units=pyunits.Mgallons/pyunits.day))
         
         self.outlet = Port(noruleinit=True, doc='Source Port')
         self.outlet.add(prop.flow_mass_comp, "flow_mass")
-        self.outlet.add(prop.flow_vol, 'flow_vol')
-        self.outlet.add(prop.conc_mass_comp, 'conc_mass')
+        # self.outlet.add(prop.flow_vol, 'flow_vol')
+        # self.outlet.add(prop.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop.temperature, 'temperature')
-        self.outlet.add(prop.pressure, 'pressure')
+        # self.outlet.add(prop.pressure, 'pressure')
+
 
 
     def initialize_build(
@@ -142,15 +147,3 @@ class SourceData(UnitModelBlockData):
 
     def calculate_scaling_factors(self):
         super().calculate_scaling_factors()
-
-        set_scaling_factor(self.properties.flow_vol, value(self.properties.flow_vol)**-1)
-        for j in self.config.property_package.solute_set:
-            set_scaling_factor(self.properties.conc_mass_comp[j], value(self.properties.conc_mass_comp[j])**-1)
-            if self.properties.is_property_constructed("flow_mass_comp"):
-                sf = value(self.properties.flow_vol * self.properties.conc_mass_comp[j]) **-1
-                set_scaling_factor(self.properties.flow_mass_comp[j], sf)
-        
-
-        if self.properties.is_property_constructed("flow_mass_comp"):
-            sf = value(self.properties.flow_vol * self.properties.dens_mass) **-1
-            set_scaling_factor(self.properties.flow_mass_comp["H2O"], sf)
