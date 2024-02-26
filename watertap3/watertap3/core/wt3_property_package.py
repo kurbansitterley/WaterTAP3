@@ -100,7 +100,7 @@ class WT3ParameterBlockData(PhysicalParameterBlock):
 
         self._state_block_class = WT3StateBlock
 
-        self.Liq = LiquidPhase()
+        # self.Liq = LiquidPhase()
         self.H2O = Solvent()
 
         for j in self.config.constituent_list:
@@ -235,8 +235,8 @@ class _WT3StateBlock(StateBlock):
         flow_mass_tot = sum(self.flow_mass_comp[jj] for jj in self.params.component_list)
         if self.is_property_constructed("flow_vol"):
             self.flow_vol.set_value(value(self.flow_mass_comp["H2O"] / self.dens_mass))
-        if self.is_property_constructed("pressure"):
-            self.pressure.set_value(101325 * 3)
+        # if self.is_property_constructed("pressure"):
+        #     self.pressure.set_value(101325 * 3)
         for j in self.params.component_list:
             
             if self.is_property_constructed("mass_frac_comp"):
@@ -251,18 +251,7 @@ class _WT3StateBlock(StateBlock):
         if self.is_property_constructed("pressure_osmotic"):
             cvc(self.osmotic_coefficient, self.eq_osmotic_coefficient)
             cvc(self.pressure_osmotic, self.eq_pressure_osmotic)
-                
-        # for j in self.params.component_list:
 
-        # if self.is_property_constructed("flow_mass_comp"):
-        #     if j == "H2O":
-        #         self.flow_mass_comp[j].set_value(
-        #             self.flow_vol * self.dens_mass
-        #         )
-        #     else:
-        #         self.flow_mass_comp[j].set_value(
-        #             self.flow_vol * self.conc_mass_comp[j]
-        #         )
 
         # Check when the state vars are fixed already result in dof 0
         # for k in self.keys():
