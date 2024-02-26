@@ -122,9 +122,8 @@ def cost_iron_and_manganese_removal(blk):
 
     @blk.Constraint(doc="Base capital cost")
     def capital_cost_base_constraint(b):
-        return (
-            b.capital_cost_base
-            == b.costing_package.TPEC *(b.blower_capital_cost + b.filter_capital_cost + b.backwash_capital_cost)
+        return b.capital_cost_base == b.costing_package.TPEC * (
+            b.blower_capital_cost + b.filter_capital_cost + b.backwash_capital_cost
         )
 
     @blk.Constraint(doc="Unit total capital cost")
@@ -132,7 +131,7 @@ def cost_iron_and_manganese_removal(blk):
         flow_m3_hr = pyunits.convert(
             b.unit_model.properties_in.flow_vol, to_units=pyunits.m**3 / pyunits.hr
         )
-        return b.capital_cost ==  pyunits.convert(
+        return b.capital_cost == pyunits.convert(
             b.capital_cost_base
             * (flow_m3_hr / b.flow_scaling_base) ** b.capital_cost_exp,
             to_units=b.costing_package.base_currency,
@@ -168,16 +167,9 @@ class UnitProcessData(WT3UnitProcessSISOData):
             doc="Air-to-water ratio for blower",
         )
 
-        self.air_flow_rate = Var(
-            initialize=100,
-            bounds=(0, None),
-            units=pyunits.m**3 / pyunits.s,
-            doc="Air-to-water ratio for blower",
-        )
-
-        @self.Constraint(doc="Air flow rate equation")
-        def air_flow_rate_constraint(b):
-            return b.air_flow_rate == b.air_water_ratio * b.properties_in.flow_vol
+        @self.Expression(doc="Air flow rate equation")
+        def air_flow_rate(b):
+            return b.air_water_ratio * b.properties_in.flow_vol
 
         self.handle_unit_params()
 
@@ -186,7 +178,7 @@ class UnitProcessData(WT3UnitProcessSISOData):
 
         if get_scaling_factor(self.air_flow_rate) is None:
             set_scaling_factor(self.air_flow_rate, 1e4)
-            
+
     @property
     def default_costing_method(self):
         return cost_iron_and_manganese_removal
