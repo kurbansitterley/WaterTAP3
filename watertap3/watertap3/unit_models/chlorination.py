@@ -117,6 +117,7 @@ class UnitProcessData(WT3UnitProcessSISOData):
             chemical = self.config.unit_params["chemical"]
         else:
             chemical = "chlorine"
+        self.properties_in.flow_vol
 
         self.contact_time = Param(
             initialize=1.5,
