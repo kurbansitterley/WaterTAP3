@@ -330,7 +330,7 @@ linked to all inlet states and the mixed state,
             state_args=self.state_args,
         )
         init_log.info(f"Initialization for outlet on {self.name} Complete.")
-        
+
         with idaeslog.solver_log(solve_log, idaeslog.DEBUG) as slc:
             res = opt.solve(self, tee=slc.tee)
             if not check_optimal_termination(res):
@@ -348,8 +348,3 @@ linked to all inlet states and the mixed state,
 
     def calculate_scaling_facors(self):
         super().calculate_scaling_factors()
-
-        # for b in self.inlet_blocks:
-
-
-

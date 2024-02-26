@@ -86,16 +86,18 @@ class SourceData(UnitModelBlockData):
 
         # prop.pressure.fix()
         prop.flow_vol
-        self.flow_mgd = Expression(expr=pyunits.convert(self.properties.flow_vol, to_units=pyunits.Mgallons/pyunits.day))
-        
-        self.outlet = Port(noruleinit=True, doc='Source Port')
+        self.flow_mgd = Expression(
+            expr=pyunits.convert(
+                self.properties.flow_vol, to_units=pyunits.Mgallons / pyunits.day
+            )
+        )
+
+        self.outlet = Port(noruleinit=True, doc="Source Port")
         self.outlet.add(prop.flow_mass_comp, "flow_mass")
         # self.outlet.add(prop.flow_vol, 'flow_vol')
         # self.outlet.add(prop.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop.temperature, 'temperature')
         # self.outlet.add(prop.pressure, 'pressure')
-
-
 
     def initialize_build(
         self,
@@ -132,7 +134,7 @@ class SourceData(UnitModelBlockData):
                         state_args[k][m] = state_dict[k][m].value
                 else:
                     state_args[k] = state_dict[k].value
-        
+
         self.properties.initialize(
             outlvl=outlvl,
             optarg=optarg,
@@ -142,7 +144,7 @@ class SourceData(UnitModelBlockData):
         )
 
         init_log.info("Initialization Complete")
-        
+
         self.initialized = True
 
     def calculate_scaling_factors(self):

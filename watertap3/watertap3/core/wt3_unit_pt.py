@@ -17,12 +17,14 @@ __author__ = "Kurban Sitterley"
 
 solver = get_solver()
 
+
 @declare_process_block_class("WT3UnitProcessPT")
 class WT3UnitProcessPTData(WT3UnitProcessBaseData):
     """
     WaterTAP3 passthrough unit.
     Unit models using this class have no component removal and no waste stream.
     """
+
     def build(self):
         super().build()
         units_meta = self.config.property_package.get_metadata().get_derived_units
@@ -39,35 +41,25 @@ class WT3UnitProcessPTData(WT3UnitProcessBaseData):
             doc="Material properties of outlet stream", **tmp_dict
         )
 
-        # @self.Constraint(doc="Overall flow balance")
-        # def flow_balance(b):
-        #     return prop_in.flow_vol == prop_out.flow_vol
-
         @self.Constraint(
             self.config.property_package.component_list, doc="Component mass balances"
         )
         def component_mass_balance(b, j):
             return prop_in.flow_mass_comp[j] == prop_out.flow_mass_comp[j]
-        
-        @self.Constraint(
-            self.config.property_package.component_list, doc="Component mass balances"
-        )
-        def component_mass_balance(b, j):
-            return prop_in.pressure == prop_out.pressure
-        
-        self.inlet = Port(noruleinit=True, doc='Inlet Port')
-        self.inlet.add(prop_in.flow_mass_comp, "flow_mass")
-        self.inlet.add(prop_in.flow_vol, 'flow_vol')
-        self.inlet.add(prop_in.conc_mass_comp, 'conc_mass')
-        # self.inlet.add(prop_in.temperature, 'temperature')
-        self.inlet.add(prop_in.pressure, 'pressure')
 
-        self.outlet = Port(noruleinit=True, doc='Outlet Port')
-        self.outlet.add(prop_in.flow_mass_comp, "flow_mass")
-        self.outlet.add(prop_out.flow_vol, 'flow_vol')
-        self.outlet.add(prop_out.conc_mass_comp, 'conc_mass')
+        self.inlet = Port(noruleinit=True, doc="Inlet Port")
+        self.inlet.add(prop_in.flow_mass_comp, "flow_mass")
+        # self.inlet.add(prop_in.flow_vol, 'flow_vol')
+        # self.inlet.add(prop_in.conc_mass_comp, 'conc_mass')
+        # self.inlet.add(prop_in.temperature, 'temperature')
+        # self.inlet.add(prop_in.pressure, 'pressure')
+
+        self.outlet = Port(noruleinit=True, doc="Outlet Port")
+        self.outlet.add(prop_out.flow_mass_comp, "flow_mass")
+        # self.outlet.add(prop_out.flow_vol, 'flow_vol')
+        # self.outlet.add(prop_out.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop_out.temperature, 'temperature')
-        self.outlet.add(prop_out.pressure, 'pressure')
+        # self.outlet.add(prop_out.pressure, 'pressure')
 
     def initialize_build(
         self,
@@ -114,7 +106,6 @@ class WT3UnitProcessPTData(WT3UnitProcessBaseData):
             self.state_args = state_args = {}
             state_dict = self.properties_in.define_port_members()
 
-
             for k in state_dict.keys():
                 if state_dict[k].is_indexed():
                     state_args[k] = {}
@@ -153,23 +144,3 @@ class WT3UnitProcessPTData(WT3UnitProcessBaseData):
 
     def calculate_scaling_factors(self):
         super().calculate_scaling_factors()
-
-        # for p in [self.properties_in, self.properties_out]:
-        #     set_scaling_factor(p.flow_vol, value(p.flow_vol)**-1)
-        #     for j in self.config.property_package.solute_set:
-        #         set_scaling_factor(p.conc_mass_comp[j], value(p.conc_mass_comp[j])**-1)
-        #         if p.is_property_constructed("flow_mass_comp"):
-        #             sf_fm = value(p.flow_vol * p.conc_mass_comp[j]) **-1
-        #             set_scaling_factor(p.flow_mass_comp[j], sf_fm)
-        #         if self.properties_in.is_property_constructed("mass_frac_comp"):
-        #             sf_mf = value(p.flow_mass_comp[j] / p.flow_mass_comp["H2O"])**-1
-        #             set_scaling_factor(p.mass_frac_comp[j], sf_mf)
-        
-        # if self.properties_in.is_property_constructed("flow_mass_comp"):
-        #     sf = value(self.properties_in.flow_vol * self.properties_in.dens_mass) **-1
-        #     set_scaling_factor(self.properties_in.flow_mass_comp["H2O"], sf)
-        #     set_scaling_factor(self.properties_out.flow_mass_comp["H2O"], sf)
-        # if self.properties_in.is_property_constructed("mass_frac_comp"):
-        #     set_scaling_factor(self.properties_in.mass_frac_comp["H2O"], 1)
-        #     set_scaling_factor(self.properties_out.mass_frac_comp["H2O"], 1)
-
