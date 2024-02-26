@@ -18,6 +18,7 @@ from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
 from watertap.costing.util import make_capital_cost_var, make_fixed_operating_cost_var
 
 from watertap3.core.wt3_unit_sido import WT3UnitProcessSIDOData
+from watertap.core.util.model_diagnostics.infeasible import *
 
 _log = idaeslog.getLogger(__name__)
 
@@ -72,6 +73,12 @@ def cost_reverse_osmosis(blk):
         bounds=(0.01, 1),
         units=pyunits.year**-1,
         doc="Membrane replacement rate",
+    )
+    blk.factor_chemical_cost = Var(
+        initialize=0.01,
+        bounds=(0.001, 0.05),
+        units=pyunits.year**-1,
+        doc="Reverse osmosis chemical addition costs",
     )
 
     blk.pump_capital_cost_base = Var(
@@ -255,9 +262,15 @@ def cost_reverse_osmosis(blk):
     @blk.Constraint(doc="Fixed operating cost equation")
     def fixed_operating_cost_constraint(b):
         return b.fixed_operating_cost == pyunits.convert(
-            b.factor_membrane_replacement
-            * b.membrane_unit_cost
-            * b.unit_model.membrane_area,
+            (b.factor_chemical_cost * b.capital_cost),
+            to_units=blk.costing_package.base_currency
+            / blk.costing_package.base_period,
+        ) + pyunits.convert(
+            (
+                b.factor_membrane_replacement
+                * b.membrane_unit_cost
+                * b.unit_model.membrane_area
+            ),  # assume chemical addition costs are 1% of capital cost
             to_units=blk.costing_package.base_currency
             / blk.costing_package.base_period,
         )
@@ -423,15 +436,15 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         @self.Constraint(doc="Target water recovery")
         def eq_target_water_recovery_lb(b):
-            return b.water_recovery >= 0.95 * b.target_water_recovery
+            return b.water_recovery >= 0.9 * b.target_water_recovery
 
         @self.Constraint(doc="Target water recovery")
         def eq_target_water_recovery_ub(b):
             return b.water_recovery <= 1.05 * b.target_water_recovery
 
-        @self.Constraint(doc="Target permeate salinity")
-        def eq_target_perm_salinity(b):
-            return b.properties_out.conc_mass_comp["tds"] <= b.target_permeate_salinity
+        # @self.Constraint(doc="Target permeate salinity")
+        # def eq_target_perm_salinity(b):
+        #     return b.properties_out.conc_mass_comp["tds"] <= b.target_permeate_salinity
 
         self.handle_unit_params()
 
@@ -471,6 +484,7 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             hold_state=True,
         )
         init_log.info("Initialization Step 1a Complete.")
+        self.removal_fraction["tds"].unfix()
 
         # ---------------------------------------------------------------------
         # Initialize other state blocks
@@ -515,7 +529,9 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             if k == "flow_mass_comp":
                 for j, u in v.items():
                     if j == "H2O":
-                        state_args_waste[k][j] = u * (1 - self.target_water_recovery.value)
+                        state_args_waste[k][j] = u * (
+                            1 - self.target_water_recovery.value
+                        )
                     else:
                         rf = self.flowsheet().unit_removal_fractions[self.unit_name][j]
                         state_args_waste[k][j] = u * rf
@@ -544,7 +560,8 @@ class UnitProcessData(WT3UnitProcessSIDOData):
         self.properties_in.release_state(flags, outlvl=outlvl)
         init_log.info("Initialization Complete: {}".format(idaeslog.condition(res)))
 
-        self.removal_fraction["tds"].unfix()
+        print_infeasible_constraints(self)
+        # self.removal_fraction["tds"].unfix()
 
         # if not check_optimal_termination(res):
         #     raise InitializationError(f"Unit model {self.name} failed to initialize.")
