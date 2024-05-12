@@ -528,6 +528,8 @@ def create_arcs(m, arc_dict):
                 destination=getattr(getattr(m.fs, outlet), outlet_port),
             ),
         )
+        tmp = getattr(m.fs, f"arc{key}")
+        tmp.propagated = False
     return m
 
 
@@ -579,9 +581,11 @@ def check_split_mixer_need(arc_dict):
 def create_mixers(m, mixer_list, arc_dict, arc_i):
     inlet_i = 1
     mixer_i = 1
+    m.fs.mixers = list()
     for mixer_i, (unit, port) in enumerate(mixer_list, 1):
         inlet_list = list()
         mixer_name = f"mixer{mixer_i}"
+        m.fs.mixers.append(mixer_name)
         # for k, v in arc_dict.items():
         for k in list(arc_dict.keys()):
             v = arc_dict[k]
