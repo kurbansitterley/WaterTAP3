@@ -146,7 +146,7 @@ linked to all inlet states and the mixed state,
         #     return prop_out.flow_vol == sum(ib.flow_vol for ib in b.inlet_blocks)
 
         @self.Constraint(
-            self.config.property_package.solute_set,
+            self.config.property_package.component_list,
             doc="Component mass balances",
         )
         def component_mass_balance(b, j):
