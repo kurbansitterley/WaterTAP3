@@ -7,10 +7,7 @@
 # University Research Corporation, et al. All rights reserved.
 ##############################################################################
 import idaes.logger as idaeslog
-from idaes.core.solvers.get_solver import get_solver
-from idaes.core.util.exceptions import InitializationError
-from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
-from pyomo.environ import Expression, check_optimal_termination, value, units as pyunits
+from pyomo.environ import Expression, units as pyunits
 from pyomo.network import Port
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
