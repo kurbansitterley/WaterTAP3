@@ -217,7 +217,9 @@ def cost_reverse_osmosis(blk):
 
     @blk.Expression(doc="Total power required")
     def power_required(b):
-        return b.pump_power - b.erd_power
+        return pyunits.convert(
+            b.pump_power, to_units=pyunits.kilowatt
+        ) - pyunits.convert(b.erd_power, to_units=pyunits.kilowatt)
 
     @blk.Constraint(doc="Membrane capital cost equation")
     def membrane_capital_cost_constraint(b):
@@ -345,6 +347,13 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             doc="Target permeate salinity",
         )
 
+        self.target_tds_removal_fraction = Param(
+            initialize=0.98,
+            mutable=True,
+            units=pyunits.dimensionless,
+            doc="Target TDS removal fraction",
+        )
+
         self.deltaP_outlet = Var(
             initialize=1e-6,
             units=pyunits.Pa,
@@ -353,7 +362,6 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         self.membrane_area = Var(
             initialize=1e6,
-            domain=NonNegativeReals,
             bounds=(0, None),
             units=pyunits.m**2,
             doc="Total membrane area",
@@ -362,7 +370,7 @@ class UnitProcessData(WT3UnitProcessSIDOData):
         self.operating_pressure = Var(
             initialize=1e6,
             domain=NonNegativeReals,
-            bounds=(101325, 8e6),
+            bounds=(101324, 8.3e6),
             units=pyunits.Pa,
             doc="Operating pressure",
         )
@@ -379,7 +387,7 @@ class UnitProcessData(WT3UnitProcessSIDOData):
         def avg_osmotic_pressure(b):
             return (
                 b.properties_in.pressure_osmotic + b.properties_waste.pressure_osmotic
-            ) * 0.5 - b.properties_out.pressure_osmotic
+            ) * 0.5
 
         @self.Constraint(doc="Operating presssure")
         def eq_operating_pressure(b):
@@ -388,18 +396,17 @@ class UnitProcessData(WT3UnitProcessSIDOData):
                 == (b.properties_in.pressure + b.properties_waste.pressure) * 0.5
             )
 
-        @self.Constraint(doc="Permeate pressure")
-        def eq_permeate_pressure(b):
-            return b.deltaP_outlet == -b.properties_in.pressure + b.pressure_atm
+        # @self.Constraint(doc="Permeate pressure")
+        # def eq_permeate_pressure(b):
+        #     return b.deltaP_outlet == -b.properties_in.pressure + b.pressure_atm
 
         @self.Constraint(doc="Water transport equation")
         def eq_water_transport(b):
             return (
-                b.properties_out.flow_mass_comp["H2O"]
-                == b.properties_in.dens_mass
-                * b.water_permeability
-                * (b.operating_pressure - b.avg_osmotic_pressure)
-                * b.membrane_area
+                b.properties_out.flow_vol
+                == b.water_permeability
+                # * (b.properties_in.pressure - b.properties_in.pressure_osmotic)
+                * (b.operating_pressure - b.avg_osmotic_pressure) * b.membrane_area
             )
 
         @self.Constraint(doc="Salt transport equation")
@@ -409,44 +416,64 @@ class UnitProcessData(WT3UnitProcessSIDOData):
                 == b.salt_permeability
                 * (
                     b.properties_in.conc_mass_comp["tds"]
-                    - b.properties_out.conc_mass_comp["tds"]
+                    + b.properties_waste.conc_mass_comp["tds"]
+                    # - b.properties_out.conc_mass_comp["tds"]
                 )
                 * b.membrane_area
             )
 
-        @self.Constraint(doc="Pressure of brine stream")
-        def eq_pressure_waste(b):
-            return (
-                b.properties_waste.pressure == b.properties_in.pressure + b.deltaP_waste
-            )
+        @self.Constraint()
+        def eq_tds_removal_lb(b):
+            return b.removal_fraction["tds"] >= b.target_tds_removal_fraction
 
-        @self.Constraint(doc="Pressure of perm stream")
-        def eq_pressure_permeate(b):
-            return (
-                b.properties_out.pressure == b.properties_in.pressure + b.deltaP_outlet
-            )
+        @self.Constraint()
+        def eq_pressure_lb(b):
+            return b.operating_pressure >= 1.01 * b.avg_osmotic_pressure
 
-        @self.Constraint(doc="Inlet pressure must be greater than osmotic")
-        def eq_min_pressure_inlet(b):
-            return b.properties_in.pressure >= b.properties_in.pressure_osmotic
+        @self.Expression()
+        def operating_pressure_bar(b):
+            return pyunits.convert(b.operating_pressure, to_units=pyunits.bar)
 
-        @self.Constraint(doc="Outlet pressure must be greater than osmotic")
-        def eq_min_pressure_brine(b):
-            return b.properties_waste.pressure >= b.properties_waste.pressure_osmotic
+        @self.Expression()
+        def avg_osmotic_pressure_bar(b):
+            return pyunits.convert(b.avg_osmotic_pressure, to_units=pyunits.bar)
 
-        @self.Constraint(doc="Target water recovery")
-        def eq_target_water_recovery_lb(b):
-            return b.water_recovery >= 0.9 * b.target_water_recovery
+        # @self.Constraint(doc="Pressure of brine stream")
+        # def eq_pressure_waste(b):
+        #     return (
+        #         b.properties_waste.pressure == b.properties_in.pressure + b.deltaP_waste
+        #     )
 
-        @self.Constraint(doc="Target water recovery")
-        def eq_target_water_recovery_ub(b):
-            return b.water_recovery <= 1.05 * b.target_water_recovery
+        # @self.Constraint(doc="Pressure of perm stream")
+        # def eq_pressure_permeate(b):
+        #     return (
+        #         b.properties_out.pressure == b.properties_in.pressure + b.deltaP_outlet
+        #     )
+
+        # @self.Constraint(doc="Inlet pressure must be greater than osmotic")
+        # def eq_min_pressure_inlet(b):
+        #     return b.properties_in.pressure >= 1.05* b.properties_in.pressure_osmotic
+
+        # @self.Constraint(doc="Outlet pressure must be greater than osmotic")
+        # def eq_min_pressure_brine(b):
+        #     return b.properties_waste.pressure >= 1.05* b.properties_waste.pressure_osmotic
+
+        # @self.Constraint(doc="Target water recovery")
+        # def eq_target_water_recovery_lb(b):
+        #     return b.water_recovery >= 0.9 * b.target_water_recovery
+
+        # @self.Constraint(doc="Target water recovery")
+        # def eq_target_water_recovery_ub(b):
+        #     return b.water_recovery <= 1.05 * b.target_water_recovery
 
         # @self.Constraint(doc="Target permeate salinity")
         # def eq_target_perm_salinity(b):
         #     return b.properties_out.conc_mass_comp["tds"] <= b.target_permeate_salinity
 
         self.handle_unit_params()
+
+    def initialize(self, **kwargs):
+        self.initialize_build(**kwargs)
 
     def initialize_build(
         self,
