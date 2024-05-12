@@ -75,10 +75,10 @@ def basic_unit(unit_process, case_specific=None):
         df = pd.read_csv(basic_unit_file, 
             index_col='unit_process')
     df = df.loc[unit_process]
-    flow_basis = df.flow_basis
-    cap_basis = df.cap_basis
-    cap_exp = df.cap_exp
-    elect = df.electricity_intensity
-    year = df.year
-    kind = df.kind
+    flow_basis = float(df.flow_basis)
+    cap_basis = float(df.cap_basis)
+    cap_exp = float(df.cap_exp)
+    elect = float(df.electricity_intensity)
+    year = int(df.year)
+    kind = str(df.kind)
     return flow_basis, cap_basis, cap_exp, elect, year, kind
