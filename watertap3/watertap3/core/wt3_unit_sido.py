@@ -90,6 +90,12 @@ class WT3UnitProcessSIDOData(WT3UnitProcessBaseData):
                 == prop_out.flow_mass_comp["H2O"]
             )
 
+        # @self.Constraint(doc="Water recovery equation")
+        # def recovery_equation(b):
+        #     return (
+        #         b.water_recovery * prop_in.flow_vol
+        #         == prop_out.flow_vol)
+
         @self.Constraint(doc="Overall flow balance")
         def flow_balance(b):
             return (
