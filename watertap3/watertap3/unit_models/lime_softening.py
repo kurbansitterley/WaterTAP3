@@ -108,7 +108,7 @@ def cost_lime_softening(blk):
         initialize=3470.6,
         bounds=(0, None),
         units=blk.basis_currency,
-        doc="CO2 reactor capital cost base",
+        doc="CO2 reactor capital cost base", # costed as circular clarifier
     )
 
     blk.CO2_reactor_capital_cost_exp = Var(

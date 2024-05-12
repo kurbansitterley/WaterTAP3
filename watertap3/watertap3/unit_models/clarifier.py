@@ -1,79 +1,110 @@
-from pyomo.environ import Var, Constraint, Expression, units as pyunits
-from watertap3.utils import financials
-from watertap3.core.wt3_unit_sido import WT3UnitProcess
+from pyomo.environ import Var, Param, units as pyunits
+from idaes.core import declare_process_block_class
+from watertap.costing.util import make_capital_cost_var
+from watertap3.core.wt3_unit_pt import WT3UnitProcessPTData
+from watertap3.core.wt3_unit_sido import WT3UnitProcessSIDOData
 
 ## REFERENCE
 ## CAPITAL:
-# Cost Estimating Manual for Water Treatment Facilities (McGivney/Kawamura) (2008)
-# DOI:10.1002/9780470260036
-# Water and Wastewater Engineering: Design Principles and Practice (Mackenzie L. Davis) (2010)
-## ELECTRICITY:
+# Kawamura and McGivney (2008)
+
+module_name = "clarifier"
 
 
-module_name = 'clarifier'
+def cost_clarifier(blk):
+    blk.basis_year = 2007
+    blk.basis_currency = getattr(pyunits, f"USD_{blk.basis_year}")
 
-class UnitProcess(WT3UnitProcess):
+    blk.capital_cost_base = Var(
+        initialize=3470.6,
+        bounds=(0, None),
+        units=blk.basis_currency,
+        doc="Clarifier capital cost base",
+    )
+    blk.capital_cost_exp = Var(
+        initialize=0.6173,
+        bounds=(0, None),
+        units=pyunits.dimensionless,
+        doc="Clarifier capital cost exponent",
+    )
 
-    def sed_setup(self):
-        time = self.flowsheet().config.time.first()
-        
-        self.residence_time = Var(
-            initialize=2, 
-            units=pyunits.hr, 
-            bounds=(0, None), 
-            doc='Residence time [hr]')
-        self.residence_time.fix(2)
+    blk.handle_costing_unit_params()
+    blk.fix_all_vars()
+    make_capital_cost_var(blk)
+    blk.costing_package.add_cost_factor(blk, "TIC")
 
-        self.basin_height = Var(
-            initialize=10, 
-            units=pyunits.ft, 
-            bounds=(0, None), 
-            doc='Basin height [ft]')
-        self.basin_height.fix(10)
-    
-        self.clarifier_capital_A = Var(
-            initialize=3470.6,
-            units=pyunits.dimensionless, 
-            bounds=(0, None), 
-            doc='Clarifier capital A factor')
-        self.clarifier_capital_A.fix(3470.6)
+    @blk.Constraint(doc="Capital cost constraint")
+    def capital_cost_constraint(b):
+        floor_area_dim = pyunits.convert(
+            b.unit_model.basin_floor_area * pyunits.ft**-2,
+            to_units=pyunits.dimensionless,
+        )
+        return b.capital_cost == b.unit_model.number_clarifiers * pyunits.convert(
+            b.capital_cost_base * floor_area_dim**b.capital_cost_exp,
+            to_units=b.costing_package.base_currency,
+        )
 
-        self.clarifier_capital_B = Var(
-            initialize=0.6173, 
-            units=pyunits.dimensionless,  
-            bounds=(0, None), 
-            doc='Clarifier capital B factor')
-        self.clarifier_capital_B.fix(0.6173)
 
-        self.basin_surface_area = Var(
-            initialize=10000, 
-            units=pyunits.ft**2, 
-            bounds=(0, None), 
-            doc='Basin surface area [ft2]')
+@declare_process_block_class("Clarifier")
+class UnitProcessData(WT3UnitProcessSIDOData):
+    def build(self):
+        super().build()
 
-        for k, v in self.unit_params.items():
-            if k in ['residence_time', 'basin_height']:
-                getattr(self, k).fix(v)
-        if 'water_recovery' in self.unit_params.keys():
-            self.water_recovery.fix(self.unit_params['water_recovery'])
+        self.residence_time = Param(
+            initialize=2, units=pyunits.hr, mutable=True, doc="Residence time"
+        )
 
-        self.basin_surface_area_constr = Constraint(expr=
-            self.basin_surface_area == pyunits.convert(
-                (self.flow_vol_in[time] * self.residence_time) / self.basin_height,
-                to_units=pyunits.ft**2
-            ))
+        self.basin_height = Param(
+            initialize=10, units=pyunits.ft, mutable=True, doc="Basin height"
+        )
 
-    def get_costing(self):
-        '''
-        Initialize the unit in WaterTAP3.
-        '''
-        basis_year = 2007
-        tpec_tic = 'TIC'
-        self.sed_setup()
-        self.costing.fixed_cap_inv_unadjusted = Expression(expr=
-                (self.clarifier_capital_A * self.basin_surface_area ** self.clarifier_capital_B) *
-                self.tpec_tic * 1E-6,
-                doc='Unadjusted fixed capital investment')
-        self.electricity = Expression(expr=0,
-                doc='Electricity intensity [kWh/m3]')
-        financials.get_complete_costing(self.costing, basis_year=basis_year, tpec_tic=tpec_tic)
+        self.total_clarifier_volume = Var(
+            initialize=1e3,
+            units=pyunits.ft**3,
+            bounds=(0, None),
+            doc="Total clarifier volume",
+        )
+
+        self.number_clarifiers = Var(
+            initialize=2,
+            units=pyunits.dimensionless,
+            bounds=(1, None),
+            doc="Number of clarifiers",
+        )
+
+        self.basin_floor_area = Var(
+            initialize=10000,
+            units=pyunits.ft**2,
+            bounds=(0, 35000),
+            doc="Basin floor area",
+        )
+
+        self.handle_unit_params()
+
+        @self.Expression(doc="Total clarifier floor area in ft2")
+        def total_clarifier_floor_area(b):
+            return pyunits.convert(
+                b.total_clarifier_volume / b.basin_height, to_units=pyunits.ft**2
+            )
+
+        @self.Constraint(doc="Floor area for single clarifier")
+        def basin_floor_area_constraint(b):
+            return (
+                b.basin_floor_area == b.total_clarifier_floor_area / b.number_clarifiers
+            )
+
+        @self.Constraint(doc="Total clarifier volume in ft3")
+        def total_clarifier_volume_constraint(b):
+            return b.total_clarifier_volume == pyunits.convert(
+                b.properties_in.flow_vol * b.residence_time, to_units=pyunits.ft**3
+            )
+
+        @self.Constraint(doc="Number of clarifiers required")
+        def number_clarifiers_constraint(b):
+            return (
+                b.number_clarifiers * b.basin_floor_area == b.total_clarifier_floor_area
+            )
+
+    @property
+    def default_costing_method(self):
+        return cost_clarifier

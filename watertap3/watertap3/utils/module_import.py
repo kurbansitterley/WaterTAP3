@@ -49,8 +49,8 @@ def get_module(module_name):
     if module_name == "chlorination":
         from watertap3.unit_models.chlorination import Chlorination as up
 
-    # if module_name == 'clarifier':
-    #     from watertap3.unit_models.clarifier as up
+    if module_name == 'clarifier':
+        from watertap3.unit_models.clarifier import Clarifier as up
 
     if module_name == "clearwell":
         from watertap3.unit_models.clearwell import Clearwell as up
