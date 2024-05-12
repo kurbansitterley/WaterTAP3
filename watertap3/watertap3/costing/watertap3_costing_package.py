@@ -218,30 +218,35 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
     def cost_chemical_flow(self, **kwargs):
         self.cost_material_flow(**kwargs)
 
-    def cost_material_flow(self, flow_rate=None, name=None):
+    def cost_material_flow(self, material=None, flow_rate=None, name=None, dose=None):
         if flow_rate is None:
             flow_rate = self.unit_model.properties_in.flow_vol
-
-        if hasattr(self.unit_model, "chemical"):
-            mat = self.unit_model.chemical
-        elif hasattr(self.unit_model, "material"):
-            mat = self.unit_model.material
-        if mat not in self.costing_package.flow_types:
-            self.costing_package.add_material_cost_param_block(material=mat)
+        
+        if dose is None:
+            dose = self.unit_model.dose
+        if material is None:
+            if hasattr(self.unit_model, "chemical"):
+                material = self.unit_model.chemical
+            elif hasattr(self.unit_model, "material"):
+                material = self.unit_model.material
+            else:
+                raise ValueError("Must include a material name.")
+        if material not in self.costing_package.flow_types:
+            self.costing_package.add_material_cost_param_block(material=material)
 
         flow_expr = Expression(
             expr=pyunits.convert(
-                flow_rate * self.unit_model.dose,
+                flow_rate * dose,
                 to_units=pyunits.kg / self.costing_package.base_period,
             )
         )
 
         if name is None:
-            name = f"{mat}_flow"
+            name = f"{material}_flow"
 
         self.add_component(name, flow_expr)
 
-        self.costing_package.cost_flow(flow_expr, mat)
+        self.costing_package.cost_flow(flow_expr, material)
     
     def handle_costing_unit_params(self):
         for k, v in self.unit_model.config.unit_params.items():
@@ -256,13 +261,15 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
                                      "but must be for a Var or Param."
                                      f"Remove {k} from unit_params on the input sheet.")
     
-    def add_pumping_energy(self, flow_rate=None, rho=None, lift_height=100):
+    def add_pumping_energy(self, flow_vol=None, flow_mass=None, rho=None, lift_height=100):
         
         unit = self.unit_model
-        if flow_rate is None:
-            flow_rate = unit.properties_in.flow_vol
+        if flow_vol is None:
+            flow_vol = unit.properties_in.flow_vol
         if rho is None:
             rho = unit.properties_in.dens_mass
+        if flow_mass is None:
+            flow_mass = flow_vol * rho
 
         self.pump_efficiency = Var(
             initialize=0.9,
@@ -282,7 +289,7 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
         )
         self.power_required = Expression(
             expr=pyunits.convert(
-                (flow_rate * rho * Constants.acceleration_gravity * self.lift_height)
+                (flow_mass * Constants.acceleration_gravity * self.lift_height)
             
             / (self.pump_efficiency * self.motor_efficiency),
             to_units=pyunits.kW)
