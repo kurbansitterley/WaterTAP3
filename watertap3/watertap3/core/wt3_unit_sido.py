@@ -7,8 +7,7 @@ import idaes.logger as idaeslog
 from idaes.core import declare_process_block_class
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.exceptions import InitializationError
-from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
-from pyomo.environ import check_optimal_termination, Var, value, units as pyunits
+from pyomo.environ import check_optimal_termination, Var, units as pyunits
 from pyomo.network import Port
 from .wt3_unit_base import WT3UnitProcessBaseData
 

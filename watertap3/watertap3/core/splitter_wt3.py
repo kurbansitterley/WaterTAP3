@@ -7,17 +7,13 @@
 # University Research Corporation, et al. All rights reserved.
 ##############################################################################
 
-
-import logging
-import idaes.logger as idaeslog
+from pyomo.network import Port
 from pyomo.environ import check_optimal_termination, Var, Constraint, units as pyunits
 from pyomo.common.config import ConfigBlock, ConfigValue, In
+
+import idaes.logger as idaeslog
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
-from idaes.core.util.exceptions import (
-    ConfigurationError,
-)
-from pyomo.network import Port
 from idaes.core.solvers.get_solver import get_solver
 
 module_name = "splitter_wt3"

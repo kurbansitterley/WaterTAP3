@@ -4,41 +4,22 @@
 # All rights reserved."
 import os
 import pandas as pd
-import idaes.logger as idaeslog
 
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
 from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
-from idaes.core.solvers import get_solver
 
 from pyomo.common.config import ConfigBlock, ConfigValue, In
-from pyomo.environ import Var, Param, value, check_optimal_termination, units as pyunits
-from pyomo.network import Port
-from idaes.core.util.exceptions import (
-    ConfigurationError,
-    InitializationError,
-    PropertyPackageError,
-)
-from idaes.core.util.model_statistics import (
-    degrees_of_freedom,
-    number_unfixed_variables,
-)
-import idaes.core.util.scaling as iscale
-from idaes.core.util.initialization import (
-    fix_state_vars,
-    revert_state_vars,
-    solve_indexed_blocks,
-)
+from pyomo.environ import Var, Param
 
-_log = idaeslog.getLogger(__name__)
 __all__ = ["WT3UnitProcessBase"]
 __author__ = "Kurban Sitterley"
+
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 chem_addition_params_file = (
     os.path.abspath(os.path.join(__location__, os.pardir))
     + "/data/chemical_addition_cost_curves.csv"
 )
-
 
 @declare_process_block_class("WT3UnitProcessBase")
 class WT3UnitProcessBaseData(UnitModelBlockData):

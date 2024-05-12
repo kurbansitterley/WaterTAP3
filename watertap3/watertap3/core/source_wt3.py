@@ -6,12 +6,14 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 ##############################################################################
-import idaes.logger as idaeslog
-from pyomo.environ import Expression, units as pyunits
+
 from pyomo.network import Port
+from pyomo.common.config import ConfigBlock, ConfigValue, In
+from pyomo.environ import Expression, units as pyunits
+
+import idaes.logger as idaeslog
 from idaes.core import UnitModelBlockData, declare_process_block_class, useDefault
 from idaes.core.util.config import is_physical_parameter_block
-from pyomo.common.config import ConfigBlock, ConfigValue, In
 
 module_name = "source_wt3"
 
