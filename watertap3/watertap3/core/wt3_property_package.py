@@ -532,7 +532,7 @@ class WT3StateBlockData(StateBlockData):
     def _pressure(self):
         self.pressure = Var(
             initialize=101325,
-            bounds=(1e4, 8e6),
+            bounds=(101324, None),
             units=pyunits.Pa,
             doc="Pressure",
         )
