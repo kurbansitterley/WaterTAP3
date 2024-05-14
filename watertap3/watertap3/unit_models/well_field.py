@@ -8,29 +8,6 @@ from watertap3.core.wt3_unit_pt import WT3UnitProcessPTData
 module_name = "well_field"
 
 
-@declare_process_block_class("WellField")
-class UnitProcessData(WT3UnitProcessPTData):
-    def build(self):
-        super().build()
-
-        if "pump" not in self.config.unit_params.keys() or not self.config.unit_params["pump"]:
-            self.has_pump = False
-        else:
-            self.has_pump = True
-
-        self.piping_distance = Param(
-            initialize=10, mutable=True, units=pyunits.mile, doc="Piping distance"
-        )
-        self.piping_diameter = Param(
-            initialize=8, mutable=True, units=pyunits.inch, doc="Piping diameter"
-        )
-        self.handle_unit_params()
-
-    @property
-    def default_costing_method(self):
-        return cost_well_field
-
-
 def cost_well_field(blk):
 
     blk.basis_year = 2018
@@ -106,3 +83,29 @@ def cost_well_field(blk):
             b.well_field_capital_cost + b.piping_capital_cost,
             to_units=b.costing_package.base_currency,
         )
+
+
+@declare_process_block_class("WellField")
+class UnitProcessData(WT3UnitProcessPTData):
+    def build(self):
+        super().build()
+
+        if (
+            "pump" not in self.config.unit_params.keys()
+            or not self.config.unit_params["pump"]
+        ):
+            self.has_pump = False
+        else:
+            self.has_pump = True
+
+        self.piping_distance = Param(
+            initialize=10, mutable=True, units=pyunits.mile, doc="Piping distance"
+        )
+        self.piping_diameter = Param(
+            initialize=8, mutable=True, units=pyunits.inch, doc="Piping diameter"
+        )
+        self.handle_unit_params()
+
+    @property
+    def default_costing_method(self):
+        return cost_well_field
