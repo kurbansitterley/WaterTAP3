@@ -24,7 +24,6 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
 
     def build(self):
         super().build()
-        units_meta = self.config.property_package.get_metadata().get_derived_units
 
         tmp_dict = dict(**self.config.property_package_args)
         tmp_dict["has_phase_equilibrium"] = False
@@ -77,15 +76,11 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
 
         self.inlet = Port(noruleinit=True, doc="Inlet Port")
         self.inlet.add(prop_in.flow_mass_comp, "flow_mass")
-        # self.inlet.add(prop_in.flow_vol, 'flow_vol')
-        # self.inlet.add(prop_in.conc_mass_comp, 'conc_mass')
         # self.inlet.add(prop_in.temperature, 'temperature')
         # self.inlet.add(prop_in.pressure, 'pressure')
 
         self.outlet = Port(noruleinit=True, doc="Outlet Port")
         self.outlet.add(prop_out.flow_mass_comp, "flow_mass")
-        # self.outlet.add(prop_out.flow_vol, 'flow_vol')
-        # self.outlet.add(prop_out.conc_mass_comp, 'conc_mass')
         # self.outlet.add(prop_out.temperature, 'temperature')
         # self.outlet.add(prop_out.pressure, 'pressure')
 
@@ -145,13 +140,13 @@ class WT3UnitProcessSISOData(WT3UnitProcessBaseData):
 
         self.state_args_out = state_args_out = deepcopy(state_args)
         for k, v in state_args.items():
-            if k == "flow_vol":
-                state_args_out[k] == v
-            elif k == "conc_mass_comp":
-                # elif isinstance(v, dict):
+            if k == "flow_mass_comp":
                 state_args_out[k] == dict()
                 for j, u in v.items():
-                    state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
+                    if j == "H2O":
+                        state_args_out[k][j] = u
+                    else:
+                        state_args_out[k][j] = (1 - self.removal_fraction[j].value) * u
 
         self.properties_out.initialize(
             outlvl=outlvl,
