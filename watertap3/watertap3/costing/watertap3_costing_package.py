@@ -35,6 +35,9 @@ last_year_for_cost_indicies = 2050
 class WT3CostingData(WaterTAPCostingBlockData):
     def build_global_params(self):
         register_idaes_currency_units()
+        pyunits.load_definitions_from_strings(
+            ["USD_2022 = 500/816.0 * USD_CE500", "USD_2023 = 500/797.9 * USD_CE500"]
+        )
         case_study = self.parent_block().train["case_study"]
         self.base_period = pyunits.year
 
@@ -209,21 +212,19 @@ class WT3CostingData(WaterTAPCostingBlockData):
         self.add_component(material, mat_block)
 
 
-
 @declare_process_block_class("WT3UnitCosting")
 class WT3UnitCostingData(UnitModelCostingBlockData):
     def build(self):
         super().build()
 
     def cost_chemical_flow(self, **kwargs):
+        if "chemical" in kwargs.keys():
+            kwargs["material"] = kwargs["chemical"]
         self.cost_material_flow(**kwargs)
 
-    def cost_material_flow(self, material=None, flow_rate=None, name=None, dose=None):
-        if flow_rate is None:
-            flow_rate = self.unit_model.properties_in.flow_vol
-        
-        if dose is None:
-            dose = self.unit_model.dose
+    def cost_material_flow(
+        self, material=None, flow_rate=None, name=None, dose=None, flow_expr=None
+    ):
         if material is None:
             if hasattr(self.unit_model, "chemical"):
                 material = self.unit_model.chemical
@@ -234,12 +235,23 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
         if material not in self.costing_package.flow_types:
             self.costing_package.add_material_cost_param_block(material=material)
 
-        flow_expr = Expression(
-            expr=pyunits.convert(
-                flow_rate * dose,
-                to_units=pyunits.kg / self.costing_package.base_period,
+        if flow_expr is None:
+            if dose is None:
+                dose = self.unit_model.dose
+            if flow_rate is None:
+                flow_rate = self.unit_model.properties_in.flow_vol
+            flow_expr = Expression(
+                expr=pyunits.convert(
+                    flow_rate * dose,
+                    to_units=pyunits.kg / self.costing_package.base_period,
+                )
             )
-        )
+        else:
+            flow_expr = Expression(
+                expr=pyunits.convert(
+                    flow_expr, to_units=pyunits.kg / self.costing_package.base_period
+                )
+            )
 
         if name is None:
             name = f"{material}_flow"
@@ -247,7 +259,7 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
         self.add_component(name, flow_expr)
 
         self.costing_package.cost_flow(flow_expr, material)
-    
+
     def handle_costing_unit_params(self):
         for k, v in self.unit_model.config.unit_params.items():
             if hasattr(self, k):
@@ -257,12 +269,16 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
                 elif isinstance(p, Param):
                     p.set_value(v)
                 else:
-                    raise ValueError(f"{k} in unit_params for {self.name} is for a {type(p)}" 
-                                     "but must be for a Var or Param."
-                                     f"Remove {k} from unit_params on the input sheet.")
-    
-    def add_pumping_energy(self, flow_vol=None, flow_mass=None, rho=None, lift_height=100):
-        
+                    raise ValueError(
+                        f"{k} in unit_params for {self.name} is for a {type(p)}"
+                        "but must be for a Var or Param."
+                        f"Remove {k} from unit_params on the input sheet."
+                    )
+
+    def add_pumping_energy(
+        self, flow_vol=None, flow_mass=None, rho=None, lift_height=100
+    ):
+
         unit = self.unit_model
         if flow_vol is None:
             flow_vol = unit.properties_in.flow_vol
@@ -285,14 +301,17 @@ class WT3UnitCostingData(UnitModelCostingBlockData):
         )
 
         self.lift_height = Var(
-            initialize=lift_height, bounds=(1, 1e5), units=pyunits.feet, doc="Pump lift height"
+            initialize=lift_height,
+            bounds=(1, 1e5),
+            units=pyunits.feet,
+            doc="Pump lift height",
         )
         self.power_required = Expression(
             expr=pyunits.convert(
                 (flow_mass * Constants.acceleration_gravity * self.lift_height)
-            
-            / (self.pump_efficiency * self.motor_efficiency),
-            to_units=pyunits.kW)
+                / (self.pump_efficiency * self.motor_efficiency),
+                to_units=pyunits.kW,
+            )
         )
 
         self.costing_package.cost_flow(self.power_required, "electricity")
