@@ -14,6 +14,7 @@ import idaes.logger as idaeslog
 from idaes.core import declare_process_block_class
 from idaes.core.solvers.get_solver import get_solver
 from idaes.core.util.scaling import set_scaling_factor, get_scaling_factor
+from idaes.core.util.exceptions import InitializationError, ConfigurationError
 
 from watertap.costing.util import make_capital_cost_var, make_fixed_operating_cost_var
 
@@ -288,8 +289,12 @@ class UnitProcessData(WT3UnitProcessSIDOData):
 
         super().build()
 
-        self.properties_in.pressure.set_value(3e6)
-        self.properties_waste.pressure.set_value(5e6)
+        if "water_type" in self.config.unit_params.keys():
+            self.water_type = self.config.unit_params["water_type"]
+            if self.water_type not in ["brackish", "seawater"]:
+                raise ConfigurationError(f"'water_type' for reverse osmosis must be either 'seawater' or 'brackish' but {self.water_type} was provided.")
+        else:
+            self.water_type = "seawater"
 
         if (
             "erd" not in self.config.unit_params.keys()
@@ -374,6 +379,17 @@ class UnitProcessData(WT3UnitProcessSIDOData):
             units=pyunits.Pa,
             doc="Operating pressure",
         )
+
+        if self.water_type == "seawater":
+            self.properties_in.pressure.set_value(3e6)
+            self.properties_waste.pressure.set_value(5e6)
+            self.operating_pressure.set_value(4e6)
+        if self.water_type == "brackish":
+            self.properties_in.pressure.set_value(2e6)
+            self.properties_waste.pressure.set_value(2.5e6)
+            self.operating_pressure.set_value(2.25e6)
+            self.properties_in.pressure.setub(2.5e6)
+            self.properties_waste.pressure.setub(2.5e6)
 
         @self.Expression(doc="Number membrane modules needed")
         def number_modules(b):
