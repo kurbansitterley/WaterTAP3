@@ -102,7 +102,7 @@ class UnitProcessData(WT3UnitProcessSIDOData):
         @self.Constraint(doc="Number of clarifiers required")
         def number_clarifiers_constraint(b):
             return (
-                b.number_clarifiers * b.basin_floor_area == b.total_clarifier_floor_area
+                b.number_clarifiers >= b.total_clarifier_floor_area / b.basin_floor_area
             )
 
     @property
