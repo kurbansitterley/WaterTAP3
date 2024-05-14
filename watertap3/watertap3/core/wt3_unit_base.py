@@ -104,11 +104,7 @@ class WT3UnitProcessBaseData(UnitModelBlockData):
                 elif isinstance(p, Param):
                     p.set_value(v)
                 else:
-                    raise ValueError(
-                        f"{k} in unit_params for {self.name} is for a {type(p)}"
-                        "but must be for a Var or Param."
-                        f"Remove {k} from unit_params on the input sheet."
-                    )
+                    continue
 
     def get_chem_addition_params(self):
         """
