@@ -120,8 +120,8 @@ def get_module(module_name):
     if module_name == "hydrochloric_acid_addition":
         from watertap3.unit_models.hydrochloric_acid_addition import HClAddition as up
 
-    # if module_name == 'ion_exchange':
-    #     from watertap3.unit_models.ion_exchange as up
+    if module_name == 'ion_exchange':
+        from watertap3.unit_models.ion_exchange import IonExchange as up
 
     if module_name == "iron_and_manganese_removal":
         from watertap3.unit_models.iron_and_manganese_removal import (
