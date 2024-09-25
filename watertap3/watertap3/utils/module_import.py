@@ -1,223 +1,234 @@
+__all__ = ["get_module"]
+# from watertap3.wt_units
 
-__all__ = ['get_module']
 
 def get_module(module_name):
-    
-    if module_name == 'alum_addition':
-        import wt_units.alum_addition as up
 
-    if module_name == 'agglom_stacking':
-        import wt_units.agglom_stacking as up
+    # if module_name == 'alum_addition':
+    #     from watertap3.unit_models.alum_addition as up
 
-    if module_name == 'ammonia_addition':
-        import wt_units.ammonia_addition as up
+    # if module_name == 'agglom_stacking':
+    #     from watertap3.unit_models.agglom_stacking as up
 
-    if module_name == 'anion_exchange':
-        import wt_units.anion_exchange as up
+    # if module_name == 'ammonia_addition':
+    #     from watertap3.unit_models.ammonia_addition as up
 
-    if module_name == 'anion_exchange_epa':
-        import wt_units.anion_exchange_epa as up
+    # if module_name == 'anion_exchange':
+    #     from watertap3.unit_models.anion_exchange as up
 
-    if module_name == 'anti_scalant_addition':
-        import wt_units.anti_scalant_addition as up
+    # if module_name == 'anion_exchange_epa':
+    #     from watertap3.unit_models.anion_exchange_epa as up
 
-    if module_name == 'backwash_solids_handling':
-        import wt_units.backwash_solids_handling as up
+    # if module_name == 'anti_scalant_addition':
+    #     from watertap3.unit_models.anti_scalant_addition as up
 
-    if module_name == 'band_screen':
-        import wt_units.band_screen as up
+    # if module_name == 'backwash_solids_handling':
+    #     from watertap3.unit_models.backwash_solids_handling as up
 
-    if module_name == 'basic_unit':
-        import wt_units.basic_unit as up
+    # if module_name == 'band_screen':
+    #     from watertap3.unit_models.band_screen as up
 
-    if module_name == 'brine_concentrator':
-        import wt_units.brine_concentrator as up
+    if module_name == "basic_unit":
+        from watertap3.unit_models.basic_unit import BasicUnit as up
 
-    if module_name == 'cartridge_filtration':
-        import wt_units.cartridge_filtration as up
+    if module_name == "brine_concentrator":
+        from watertap3.unit_models.brine_concentrator import BrineConcentrator as up
 
-    if module_name == 'cation_exchange':
-        import wt_units.cation_exchange as up
+    if module_name == "cartridge_filtration":
+        from watertap3.unit_models.cartridge_filtration import CartridgeFiltration as up
 
-    if module_name == 'caustic_soda_addition':
-        import wt_units.caustic_soda_addition as up
+    # if module_name == 'cation_exchange':
+    #     from watertap3.unit_models.cation_exchange as up
 
-    if module_name == 'chemical_addition':
-        import wt_units.chemical_addition as up
+    # if module_name == 'caustic_soda_addition':
+    #     from watertap3.unit_models.caustic_soda_addition as up
 
-    if module_name == 'chlorination':
-        import wt_units.chlorination as up
+    if module_name == "chemical_addition":
+        from watertap3.unit_models.chemical_addition import ChemicalAddition as up
+
+    if module_name == "chlorination":
+        from watertap3.unit_models.chlorination import Chlorination as up
 
     if module_name == 'clarifier':
-        import wt_units.clarifier as up
+        from watertap3.unit_models.clarifier import Clarifier as up
 
-    if module_name == 'clearwell':
-        import wt_units.clearwell as up
+    if module_name == "clearwell":
+        from watertap3.unit_models.clearwell import Clearwell as up
 
-    if module_name == 'co2_addition':
-        import wt_units.co2_addition as up
+    # if module_name == 'co2_addition':
+    #     from watertap3.unit_models.co2_addition as up
 
-    if module_name == 'coag_and_floc':
-        import wt_units.coag_and_floc as up
+    # if module_name == 'coag_and_floc':
+    #     from watertap3.unit_models.coag_and_floc as up
 
-    if module_name == 'coagulant_addition':
-        import wt_units.coagulant_addition as up
+    # if module_name == 'coagulant_addition':
+    #     from watertap3.unit_models.coagulant_addition as up
 
-    if module_name == 'cooling_tower':
-        import wt_units.cooling_tower as up
+    # if module_name == 'cooling_tower':
+    #     from watertap3.unit_models.cooling_tower as up
 
-    if module_name == 'crystallizer':
-        import wt_units.crystallizer as up
+    # if module_name == 'crystallizer':
+    #     from watertap3.unit_models.crystallizer as up
 
-    if module_name == 'deep_well_injection':
-        import wt_units.deep_well_injection as up
+    # if module_name == 'deep_well_injection':
+    #     from watertap3.unit_models.deep_well_injection as up
 
-    if module_name == 'drum_screen':
-        import wt_units.drum_screen as up
+    # if module_name == 'drum_screen':
+    #     from watertap3.unit_models.drum_screen as up
 
-    if module_name == 'electrodialysis_reversal':
-        import wt_units.electrodialysis_reversal as up
+    if module_name == "electrodialysis_reversal":
+        from watertap3.unit_models.electrodialysis_reversal import (
+            ElectrodialysisReversal as up,
+        )
 
-    if module_name == 'evaporation_pond':
-        import wt_units.evaporation_pond as up
+    if module_name == "evaporation_pond":
+        from watertap3.unit_models.evaporation_pond import EvaporationPond as up
 
-    if module_name == 'ferric_chloride_addition':
-        import wt_units.ferric_chloride_addition as up
+    # if module_name == 'ferric_chloride_addition':
+    #     from watertap3.unit_models.ferric_chloride_addition as up
 
-    if module_name == 'filter_press':
-        import wt_units.filter_press as up
-    
-    if module_name == 'fixed_bed_gravity_basin':
-        import wt_units.fixed_bed_gravity_basin as up
+    # if module_name == 'filter_press':
+    #     from watertap3.unit_models.filter_press as up
 
-    if module_name == 'fixed_bed_pressure_vessel':
-        import wt_units.fixed_bed_pressure_vessel as up
+    # if module_name == 'fixed_bed_gravity_basin':
+    #     from watertap3.unit_models.fixed_bed_gravity_basin as up
 
-    if module_name == 'flocculator':
-        import wt_units.flocculator as up
+    # if module_name == 'fixed_bed_pressure_vessel':
+    #     from watertap3.unit_models.fixed_bed_pressure_vessel as up
 
-    if module_name == 'fluidized_bed':
-        import wt_units.fluidized_bed as up
-    
-    if module_name == 'gac_gravity':
-        import wt_units.gac_gravity as up
+    # if module_name == 'flocculator':
+    #     from watertap3.unit_models.flocculator as up
 
-    if module_name == 'gac_pressure_vessel':
-        import wt_units.gac_pressure_vessel as up
-    
-    if module_name == 'gravity_thickener':
-        import wt_units.gravity_thickener as up
+    # if module_name == 'fluidized_bed':
+    #     from watertap3.unit_models.fluidized_bed as up
 
-    if module_name == 'grit_chamber':
-        import wt_units.grit_chamber as up
+    # if module_name == 'gac_gravity':
+    #     from watertap3.unit_models.gac_gravity as up
 
-    if module_name == 'heap_leaching':
-        import wt_units.heap_leaching as up
+    # if module_name == 'gac_pressure_vessel':
+    #     from watertap3.unit_models.gac_pressure_vessel as up
 
-    if module_name == 'hydrochloric_acid_addition':
-        import wt_units.hydrochloric_acid_addition as up
+    # if module_name == 'gravity_thickener':
+    #     from watertap3.unit_models.gravity_thickener as up
+
+    # if module_name == 'grit_chamber':
+    #     from watertap3.unit_models.grit_chamber as up
+
+    # if module_name == 'heap_leaching':
+    #     from watertap3.unit_models.heap_leaching as up
+
+    if module_name == "hydrochloric_acid_addition":
+        from watertap3.unit_models.hydrochloric_acid_addition import HClAddition as up
 
     if module_name == 'ion_exchange':
-        import wt_units.ion_exchange as up
+        from watertap3.unit_models.ion_exchange import IonExchange as up
 
-    if module_name == 'iron_and_manganese_removal':
-        import wt_units.iron_and_manganese_removal as up
+    if module_name == "iron_and_manganese_removal":
+        from watertap3.unit_models.iron_and_manganese_removal import (
+            IronAndManganeseRemoval as up,
+        )
 
-    if module_name == 'kmno4_addition':
-        import wt_units.kmno4_addition as up
+    # if module_name == 'kmno4_addition':
+    #     from watertap3.unit_models.kmno4_addition as up
 
-    if module_name == 'landfill_zld':
-        import wt_units.landfill_zld as up
+    # if module_name == 'landfill_zld':
+    #     from watertap3.unit_models.landfill_zld as up
 
-    if module_name == 'landfill':
-        import wt_units.landfill as up
+    # if module_name == 'landfill':
+    #     from watertap3.unit_models.landfill as up
 
-    if module_name == 'lime_addition':
-        import wt_units.lime_addition as up
+    # if module_name == 'lime_addition':
+    #     from watertap3.unit_models.lime_addition as up
 
-    if module_name == 'lime_softening':
-        import wt_units.lime_softening as up
+    if module_name == "lime_softening":
+        from watertap3.unit_models.lime_softening import LimeSoftening as up
 
-    if module_name == 'media_filtration':
-        import wt_units.media_filtration as up
+    # if module_name == 'media_filtration':
+    #     from watertap3.unit_models.media_filtration as up
 
-    if module_name == 'micro_screen':
-        import wt_units.micro_screen as up
+    # if module_name == 'micro_screen':
+    #     from watertap3.unit_models.micro_screen as up
 
-    if module_name == 'microfiltration':
-        import wt_units.microfiltration as up
+    if module_name == "microfiltration":
+        from watertap3.unit_models.microfiltration import Microfiltration as up
 
-    if module_name == 'multi_stage_bubble_aeration':
-        import wt_units.multi_stage_bubble_aeration as up
+    # if module_name == 'multi_stage_bubble_aeration':
+    #     from watertap3.unit_models.multi_stage_bubble_aeration as up
+    
+    if module_name == "raw_water_pumping_station":
+        from watertap3.unit_models.raw_water_pumping_station import (
+            RawWaterPumpingStation as up,
+        )
 
-    if module_name == 'municipal_drinking':
-        import wt_units.municipal_drinking as up
+    if module_name == "treated_water_pumping_station":
+        from watertap3.unit_models.treated_water_pumping_station import (
+            TreatedWaterPumpingStation as up,
+        )
 
     if module_name == 'nanofiltration':
-        import wt_units.nanofiltration as up
+        from watertap3.unit_models.nanofiltration import Nanofiltration as up
 
-    if module_name == 'ozone_aop':
-        import wt_units.ozone_aop as up
+    # if module_name == 'ozone_aop':
+    #     from watertap3.unit_models.ozone_aop as up
 
-    if module_name == 'pac_addition':
-        import wt_units.pac_addition as up
+    # if module_name == 'pac_addition':
+    #     from watertap3.unit_models.pac_addition as up
 
-    if module_name == 'packed_tower_aeration':
-        import wt_units.packed_tower_aeration as up
+    # if module_name == 'packed_tower_aeration':
+    #     from watertap3.unit_models.packed_tower_aeration as up
 
-    if module_name == 'passthrough':
-        import wt_units.passthrough as up
+    if module_name == "passthrough":
+        from watertap3.unit_models.passthrough import Passthrough as up
 
-    if module_name == 'polymer_addition':
-        import wt_units.polymer_addition as up
+    # if module_name == 'polymer_addition':
+    #     from watertap3.unit_models.polymer_addition as up
 
-    if module_name == 'rapid_mix':
-        import wt_units.rapid_mix as up
+    # if module_name == 'rapid_mix':
+    #     from watertap3.unit_models.rapid_mix as up
 
-    if module_name == 'reverse_osmosis':
-        import wt_units.reverse_osmosis as up
+    if module_name == "reverse_osmosis":
+        from watertap3.unit_models.reverse_osmosis import ReverseOsmosis as up
 
-    if module_name == 'sedimentation':
-        import wt_units.sedimentation as up
+    # if module_name == 'sedimentation':
+    #     from watertap3.unit_models.sedimentation as up
 
-    if module_name == 'sodium_bisulfite_addition':
-        import wt_units.sodium_bisulfite_addition as up
+    # if module_name == 'sodium_bisulfite_addition':
+    #     from watertap3.unit_models.sodium_bisulfite_addition as up
 
-    if module_name == 'solution_distribution_and_recovery_plant':
-        import wt_units.solution_distribution_and_recovery_plant as up
+    # if module_name == 'solution_distribution_and_recovery_plant':
+    #     from watertap3.unit_models.solution_distribution_and_recovery_plant as up
 
-    if module_name == 'static_mixer':
-        import wt_units.static_mixer as up
+    # if module_name == 'static_mixer':
+    #     from watertap3.unit_models.static_mixer as up
 
-    if module_name == 'storage_tank':
-        import wt_units.storage_tank as up
+    if module_name == "storage_tank":
+        from watertap3.unit_models.storage_tank import StorageTank as up
 
-    if module_name == 'sulfuric_acid_addition':
-        import wt_units.sulfuric_acid_addition as up
+    # if module_name == 'sulfuric_acid_addition':
+    #     from watertap3.unit_models.sulfuric_acid_addition as up
 
-    if module_name == 'surface_discharge':
-        import wt_units.surface_discharge as up
+    if module_name == "surface_discharge":
+        from watertap3.unit_models.surface_discharge import SurfaceDischarge as up
 
-    if module_name == 'sw_onshore_intake':
-        import wt_units.sw_onshore_intake as up
+    # if module_name == 'sw_onshore_intake':
+    #     from watertap3.unit_models.sw_onshore_intake as up
 
-    if module_name == 'tri_media_filtration':
-        import wt_units.tri_media_filtration as up
+    # if module_name == 'tri_media_filtration':
+    #     from watertap3.unit_models.tri_media_filtration as up
 
     if module_name == 'ultrafiltration':
-        import wt_units.ultrafiltration as up
+        from watertap3.unit_models.ultrafiltration import Ultrafiltration as up
 
-    if module_name == 'uv_aop':
-        import wt_units.uv_aop as up
+    # if module_name == 'uv_aop':
+    #     from watertap3.unit_models.uv_aop as up
 
-    if module_name == 'water_pumping_station':
-        import wt_units.water_pumping_station as up
-        
-    if module_name == 'well_field':
-        import wt_units.well_field as up
-    
-    if module_name == 'wire_screen':
-        import wt_units.wire_screen as up
+    # if module_name == 'water_pumping_station':
+    #     from watertap3.unit_models.water_pumping_station as up
+
+    if module_name == "well_field":
+        from watertap3.unit_models.well_field import WellField as up
+
+    # if module_name == 'wire_screen':
+    #     from watertap3.unit_models.wire_screen as up
 
     return up
-

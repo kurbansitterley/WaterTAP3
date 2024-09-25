@@ -1,13 +1,15 @@
+import os
 import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
 __all__ = ['epa_cost_curve',
            'basic_unit']
-
-
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+epa_curves_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/epa_cost_curves.csv"
+basic_unit_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/basic_unit_cost_curves_and_energy_intensities.csv"
 def epa_cost_curve(unit_process, **kwargs):
-    df = pd.read_csv('data/epa_cost_curves.csv', index_col='unit_process')
+    df = pd.read_csv(epa_curves_file, index_col='unit_process')
     df = df.loc[unit_process]
 
     params = ['flow_in', 'cap_total', 'electricity_intensity', 'tds_in', 'num_stage', 'radon_rem', 'ebct']
@@ -70,13 +72,13 @@ def basic_unit(unit_process, case_specific=None):
     if case_specific == 'solaire':
         df = pd.read_csv('data/basic_units_solaire.csv', index_col='unit_process')
     else:
-        df = pd.read_csv('data/basic_unit_cost_curves_and_energy_intensities.csv', 
+        df = pd.read_csv(basic_unit_file, 
             index_col='unit_process')
     df = df.loc[unit_process]
-    flow_basis = df.flow_basis
-    cap_basis = df.cap_basis
-    cap_exp = df.cap_exp
-    elect = df.electricity_intensity
-    year = df.year
-    kind = df.kind
+    flow_basis = float(df.flow_basis)
+    cap_basis = float(df.cap_basis)
+    cap_exp = float(df.cap_exp)
+    elect = float(df.electricity_intensity)
+    year = int(df.year)
+    kind = str(df.kind)
     return flow_basis, cap_basis, cap_exp, elect, year, kind

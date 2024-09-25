@@ -6,7 +6,8 @@
 # Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia
 # University Research Corporation, et al. All rights reserved.
 ##############################################################################
-import seaborn as sns
+
+import os
 import pandas as pd
 from pyomo.environ import (Block, Expression, Constraint, Param, Var, NonNegativeReals, units as pyunits)
 
@@ -17,12 +18,17 @@ __all__ = ['SystemSpecs', 'get_complete_costing', 'get_ind_table', 'get_system_s
 
 last_year_for_cost_indicies = 2050
 
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+case_study_TEA_basis_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/case_study_TEA_basis.csv"
+industrial_electricity_costs_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/industrial_electricity_costs_2020.csv"
+chem_costs_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/chemical_costs.csv"
+plant_costs_indices_file = os.path.abspath(os.path.join(__location__, os.pardir)) + "/data/plant_cost_indices.csv"
 
 class SystemSpecs():
 
     def __init__(self, train=None):
-        basis_data = pd.read_csv('data/case_study_TEA_basis.csv', index_col='case_study')
-        elec_cost = pd.read_csv('data/industrial_electricity_costs_2020.csv', index_col='location')
+        basis_data = pd.read_csv(case_study_TEA_basis_file, index_col='case_study')
+        elec_cost = pd.read_csv(industrial_electricity_costs_file, index_col='location')
         elec_cost.index = elec_cost.index.str.lower()
         case_study = train['case_study']
         if 'test' in case_study:
@@ -75,105 +81,6 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     elif tpec_tic == 'TIC':
         unit.tpec_tic.fix(sys_cost_params.tic)
 
-    costing.tci_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for TCI')
-
-    costing.tci_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for TCI')
-
-    costing.fci_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for FCI')
-
-    costing.fci_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for FCI')
-
-    costing.fixed_op_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Fixed O&M')
-
-    costing.fixed_op_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Fixed O&M')
-
-    costing.annual_op_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Annual O&M')
-
-    costing.annual_op_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Annual O&M')
-
-    costing.total_op_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Total O&M')
-
-    costing.total_op_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Total O&M')
-
-    costing.catchem_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Catalysts/Chemicals')
-
-    costing.catchem_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Catalysts/Chemicals')
-
-    costing.elect_intens_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Electricity Intensity')
-
-    costing.elect_intens_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Electricity Intensity')
-
-    costing.elect_cost_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Electricity Intensity')
-
-    costing.elect_cost_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Electricity Intensity')
-
-    costing.other_reduction = Var(
-            initialize=0,
-            doc='Reduction factor for Other capital')
-
-    costing.other_uncertainty = Var(
-            initialize=1,
-            doc='Uncertainty for Other capital')
-
-    costing.tci_reduction.fix(0)
-    costing.tci_uncertainty.fix(1)
-
-    costing.fci_reduction.fix(0)
-    costing.fci_uncertainty.fix(1)
-
-    costing.fixed_op_reduction.fix(0)
-    costing.fixed_op_uncertainty.fix(1)
-
-    costing.annual_op_reduction.fix(0)
-    costing.annual_op_uncertainty.fix(1)
-
-    costing.total_op_reduction.fix(0)
-    costing.total_op_uncertainty.fix(1)
-
-    costing.catchem_reduction.fix(0)
-    costing.catchem_uncertainty.fix(1)
-
-    costing.elect_intens_reduction.fix(0)
-    costing.elect_intens_uncertainty.fix(1)
-
-    costing.elect_cost_reduction.fix(0)
-    costing.elect_cost_uncertainty.fix(1)
-
-    costing.other_reduction.fix(0)
-    costing.other_uncertainty.fix(1)
-
     basis_year = costing.basis_year
     sys_specs = unit.parent_block().costing_param
 
@@ -187,8 +94,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     costing.labor_and_other_fixed = df.loc[basis_year].Labor_Factor
     costing.consumer_price_index = df.loc[basis_year].CPI_Factor
 
-    costing.fixed_cap_inv = ((costing.fixed_cap_inv_unadjusted * costing.cap_replacement_parts) * 
-            (1 - costing.fci_reduction)) * costing.fci_uncertainty
+    costing.fixed_cap_inv = (costing.fixed_cap_inv_unadjusted * costing.cap_replacement_parts) 
     costing.land_cost = costing.fixed_cap_inv * sys_specs.land_cost_percent_FCI
     costing.working_cap = costing.fixed_cap_inv * sys_specs.working_cap_percent_FCI
     costing.contingency = costing.fixed_cap_inv * sys_specs.contingency_cost_percent_FCI
@@ -200,7 +106,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
     costing.lab = costing.fixed_cap_inv * sys_specs.lab_fees_percent_FCI
     costing.insurance_taxes = costing.fixed_cap_inv * sys_specs.insurance_taxes_percent_FCI
 
-    cat_chem_df = pd.read_csv('data/chemical_costs.csv', index_col='Material')
+    cat_chem_df = pd.read_csv(chem_costs_file, index_col='Material')
     costing.chem_cost_sum = chem_cost_sum = 0
     for chem, dose in chem_dict.items():
         # if chem == 'unit_cost':
@@ -241,7 +147,7 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
         (1 - costing.elect_intens_reduction)) * costing.elect_intens_uncertainty
     costing.electricity_cost = ((costing.electricity_intensity * \
         flow_in_m3yr * sys_specs.electricity_price * 1E-6) * 
-            sys_specs.plant_cap_utilization) * (1 - costing.elect_cost_reduction) * costing.elect_cost_uncertainty
+            sys_specs.plant_cap_utilization) 
 
     if not hasattr(costing, 'other_var_cost'):
         costing.other_var_cost = 0
@@ -250,17 +156,13 @@ def get_complete_costing(costing, basis_year=2020, tpec_tic=None):
         costing.other_var_cost = (costing.other_var_cost * \
             (1 - costing.other_reduction)) * costing.other_uncertainty
 
-    costing.total_cap_investment = (costing.fixed_cap_inv + costing.land_cost + costing.working_cap) * \
-            (1 - costing.tci_reduction) * costing.tci_uncertainty
+    costing.total_cap_investment = (costing.fixed_cap_inv + costing.land_cost + costing.working_cap)
     costing.total_fixed_op_cost = ((costing.salaries + costing.benefits + 
-            costing.maintenance + costing.lab + costing.insurance_taxes) * 
-            (1 - costing.fixed_op_reduction)) * costing.fixed_op_uncertainty
+            costing.maintenance + costing.lab + costing.insurance_taxes))
     costing.annual_op_main_cost = ((costing.cat_and_chem_cost + costing.electricity_cost + 
-            costing.other_var_cost + costing.total_fixed_op_cost) * 
-            (1 - costing.annual_op_reduction)) * costing.annual_op_uncertainty
+            costing.other_var_cost + costing.total_fixed_op_cost)) 
     costing.total_operating_cost = ((costing.total_fixed_op_cost + costing.cat_and_chem_cost + 
-            costing.electricity_cost + costing.other_var_cost) * 
-            (1 - costing.total_op_reduction)) * costing.total_op_uncertainty
+            costing.electricity_cost + costing.other_var_cost) )
 
 
 def get_ind_table(analysis_yr_cost_indices):
@@ -271,26 +173,26 @@ def get_ind_table(analysis_yr_cost_indices):
     :type analysis_yr_cost_indices: int
     :return: Indicies DataFrame
     '''
-    df = pd.read_csv('data/plant_cost_indices.csv')
+    df = pd.read_csv(plant_costs_indices_file)
 
     df1 = pd.DataFrame()
     for name in df.columns[1:]:
-        a, b = get_linear_regression(list(df.Year), list(df[('%s' % name)]), name)
+        a, b = get_linear_regression(list(df.year), list(df[(f'{name}')]), name)
         new_list = []
         yr_list = []
-        for yr in range(df.Year.max() + 1, last_year_for_cost_indicies + 1):
+        for yr in range(df.year.max() + 1, last_year_for_cost_indicies + 1):
             new_list.append(a * yr + b)
             yr_list.append(yr)
         df1[name] = new_list
-    df1['Year'] = yr_list
+    df1['year'] = yr_list
     df = pd.concat([df, df1], axis=0)
 
-    new_cost_variables = ['Capital', 'CatChem', 'Labor', 'CPI']
+    new_cost_variables = ['capital', 'chemical', 'labor']
     for variable in new_cost_variables:
-        ind_name = '%s_Index' % variable
-        fac_name = '%s_Factor' % variable
-        df[fac_name] = (df[df.Year == analysis_yr_cost_indices][ind_name].max() / df[ind_name])
-    df = df.set_index(df.Year)
+        ind_name = '%s_index' % variable
+        fac_name = '%s_factor' % variable
+        df[fac_name] = (df[df.year == analysis_yr_cost_indices][ind_name].max() / df[ind_name])
+    df = df.set_index(df.year)
     df = df.replace(1.0, 1.00000000001)
 
     return df
@@ -399,68 +301,6 @@ def get_system_costing(m_fs):
             electricity_cost_lst.append(b_unit.costing.electricity_cost)
             other_var_cost_lst.append(b_unit.costing.other_var_cost)
             total_fixed_op_cost_lst.append(b_unit.costing.total_fixed_op_cost)
-
-    b.sys_tci_reduction = Var(
-        initialize=0,
-        doc='System TCI reduction factor')
-
-    b.sys_catchem_reduction = Var(
-        initialize=0,
-        doc='System catalyst/chemical cost reduction factor')
-
-    b.sys_elect_reduction = Var(
-        initialize=0,
-        doc='System electricity cost reduction factor')
-
-    b.sys_other_reduction = Var(
-        initialize=0,
-        doc='System other cost reduction factor')
-
-    b.sys_fixed_op_reduction = Var(
-        initialize=0,
-        doc='System fixed O&M reduction factor')
-
-    b.sys_total_op_reduction = Var(
-        initialize=0,
-        doc='System total O&M reduction factor')
-
-    b.sys_tci_reduction.fix(0)
-    b.sys_catchem_reduction.fix(0)
-    b.sys_elect_reduction.fix(0)
-    b.sys_other_reduction.fix(0)
-    b.sys_fixed_op_reduction.fix(0)
-    b.sys_total_op_reduction.fix(0)
-
-    b.sys_tci_uncertainty = Var(
-        initialize=1,
-        doc='System TCI uncertainty factor')
-
-    b.sys_catchem_uncertainty = Var(
-        initialize=1,
-        doc='System catalyst/chemical cost uncertainty factor')
-
-    b.sys_elect_uncertainty = Var(
-        initialize=1,
-        doc='System electricity cost uncertainty factor')
-
-    b.sys_other_uncertainty = Var(
-        initialize=1,
-        doc='System other cost uncertainty factor')
-
-    b.sys_fixed_op_uncertainty = Var(
-        initialize=1,
-        doc='System fixed O&M uncertainty factor')
-
-    b.sys_total_op_uncertainty = Var(
-        initialize=1,
-        doc='System total O&M uncertainty factor')
-
-    b.sys_tci_uncertainty.fix(1)
-    b.sys_catchem_uncertainty.fix(1)
-    b.sys_elect_uncertainty.fix(1)
-    b.sys_other_uncertainty.fix(1)
-    b.sys_fixed_op_uncertainty.fix(1)
-    b.sys_total_op_uncertainty.fix(1)
 
     b.cat_and_chem_cost_annual = Expression(expr=
         (sum(cat_and_chem_cost_lst) * (1 - b.sys_catchem_reduction)) * b.sys_catchem_uncertainty)
