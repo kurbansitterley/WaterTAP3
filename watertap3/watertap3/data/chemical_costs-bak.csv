@@ -1,0 +1,57 @@
+Material,Price Units,Price,Price Year,Purity,Reference
+Acetic Acid,$ / kg,1.1,2020,100.00%,
+Activated Carbon,$ / kg,3.63759,2020,100.00%,"EPA Work Breakdown Structure Water Treatment Models (EPA-WBS, epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models)"
+Alum,$ / kg,0.69,2020,17.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Ammonia,$ / kg,0.79,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Anionic Polymer,$ / kg,0.79,2017,100.00%,"Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"
+Anthracite,$ / kg,1.124346,2020,100.00%,GWI Desal Cost Estimator (desaldata.com)
+Antifoam Emulsion,$ / kg,0.53,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Antifoam Powder,$ / kg,0.53,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Benzalkonium Chloride,$ / kg,0.1,2020,100.00%,
+Calcium Carbonate,$ / kg,0.42,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Carbohydrazine,$ / kg,0.1,2020,100.00%,
+Cathodic Inhibitor,$ / kg,0.1,2020,100.00%,
+Cationic Polymer,$ / kg,0.79,2017,100.00%,"Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"
+Chlorine,$ / kg,0.34,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Chlorine dioxide,$ / kg,2.72,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/) & Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"
+Chloroisocyanurates,$ / kg,0.1,2020,100.00%,
+Citric Acid,$ / kg,1.92,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Copper Sulphate,$ / kg,2.25,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Diethylhydroxyethanol,$ / kg,0.51,2020,100.00%,
+Glycerin,$ / kg,0.75,2020,100.00%,"Process Economics Program, IHS Markit"
+Gravel,$ / kg,1,2020,100.00%,"EPA Work Breakdown Structure Water Treatment Models (EPA-WBS, epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models)"
+Hydrazine,$ / kg,3.49,2020,85.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Hydrochloric Acid,$ / kg,0.17,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Hydrogen Peroxide,$ / kg,1.53,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Hydroquinone,$ / kg,4.18,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Hypochlorite,$ / kg,1.13,2020,100.00%,
+Ion Exchange Resin,$ / kg,7.072,2019,100.00%,"Process Economics Program, IHS Markit & Water Treatment Estimation Routine (WaTER, Bureau of Reclamation - now WT Cost II 1 Moch, I., Querns, W, M., and Steward, D.; WT  Cost II, Desalination and Water Purification Research and Development Program Report No. 130, February  2008.) "
+Ion Exchange Resin CF,$ / ft**3,177.15,2019,100.00%,"EPA Work Breakdown Structure Water Treatment Models (EPA-WBS, epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models)"
+Ferric Sulfate,$ / kg,0.49,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Ferric Chloride,$ / kg,0.88,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Iron Salts,$ / kg,0.77,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Lime Suspension,$ / kg,0.15,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Methylethylketoxime,$ / kg,0.52,2020,100.00%,
+Molasses,$ / kg,0.06,2020,100.00%,"Process Economics Program, IHS Markit"
+Organic Inhibitor,$ / kg,0.36,2020,100.00%,
+Oxidation Media,$ / kg,1,2020,100.00%,"EPA Work Breakdown Structure Water Treatment Models (EPA-WBS, epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models)"
+Oxygen,$ / kg,0.11,2020,100.00%,"Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"
+Phosphate Esters,$ / kg,0.63,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Phosphoric Acid,$ / kg,0.97,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Potassium Chloride,$ / kg,1.36,2020,100.00%,
+Potassium Permanganate,$ / kg,7.85,2016,100.00%,"Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"
+Powder Activated Carbon,$ / kg,2.03,2016,100.00%,"Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"
+Precipitation Inhibitor,$ / kg,0.37,2020,100.00%,
+Rosin Amine Salts,$ / kg,0.5,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Sand,$ / kg,0.510219804,2020,100.00%,
+Soda Ash,$ / kg,0.19,2020,100.00%,
+Sodium Hypochlorite,$ / kg,0.23,2020,15.00%,"Water Treatment Estimation Routine (WaTER, Bureau of Reclamation - now WT Cost II 1 Moch, I., Querns, W, M., and Steward, D.; WT  Cost II, Desalination and Water Purification Research and Development Program Report No. 130, February  2008.) "
+Sodium Bisullfite,$ / kg,0.36,2020,100.00%,"CatCost v. 1.0.4 price survey (National Renewable Energy Lab: Golden, CO, USA, 2021, https://catcost.chemcatbio.org/)"
+Sodium Chloride,$ / kg,0.08,2020,100.00%,
+Sodium Hexametaphosphate,$ / kg,7.2,2020,100.00%,
+Sodium Hydroxide,$ / kg,0.11,2020,100.00%,"Process Economics Program, IHS Markit"
+Sulfuric Acid,$ / kg,0.12,2020,100.00%,
+UV Bulbs,$ / kg,1,2020,100.00%,"EPA Work Breakdown Structure Water Treatment Models (EPA-WBS, epa.gov/sdwa/drinking-water-treatment-technology-unit-cost-models)"
+Volatile Corrosion Inhibitor,$ / kg,0.38,2020,100.00%,
+Sodium Tripolyphosphate,$ / kg,2.4,2018,100.00%,
+Fluoride,$ / kg,1.34,2020,100.00%,"Water Supply Evaluation Tool (WaterSET; Hadjikakou, M. et al., 2019, doi.org/10.1016/j.scitotenv.2019.03.288)"

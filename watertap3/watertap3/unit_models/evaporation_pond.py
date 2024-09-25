@@ -647,6 +647,8 @@ class UnitProcessData(WT3UnitProcessPTData):
             doc="Number of evaporation ponds",
         )
 
+        self.handle_unit_params()
+
         @self.Expression()
         def evap_rate_mm_d(b):
             return pyunits.convert(

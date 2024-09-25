@@ -12,6 +12,10 @@ aeration_basin2,default,baseline,kg/m3,0.5,thallium,fractional_constituent_remov
 anaerobic_digestion_oxidation,default,baseline,kg/m3,0.75,tss,fractional_constituent_removal,nawi,Beef Processing case study.,Total Suspended Solids (TSS)
 anaerobic_digestion_oxidation,default,baseline,kg/m3,0.97,bod,fractional_constituent_removal,nawi,Beef Processing case study.,Biological Oxygen Demand (BOD)
 anion_exchange_epa,default,baseline,kg/m3,0.9,tds,fractional_constituent_removal,nawi,,
+ion_exchange,default,baseline,kg/m3,0.9,alkalinity,fractional_constituent_removal,nawi,,
+ion_exchange,default,baseline,kg/m3,0.9,alkalinity_as_caco3,fractional_constituent_removal,nawi,,
+ion_exchange,default,baseline,kg/m3,0.9,tds,fractional_constituent_removal,nawi,"default, should be adjusted by user",
+ion_exchange,irwin,baseline,kg/m3,0.01,tds,fractional_constituent_removal,nawi,"default, should be adjusted by user",
 backwash_solids_handling,default,baseline,kg/m3,0.95,nitrate,fractional_constituent_removal,nawi,default,Nitrate (measured as Nitrogen)
 backwash_solids_handling,default,baseline,kg/m3,0.95,toc,fractional_constituent_removal,nawi,default,Total Organic Carbon (TOC)
 backwash_solids_handling,default,baseline,kg/m3,0.95,tss,fractional_constituent_removal,nawi,default,Total Suspended Solids (TSS))
@@ -172,6 +176,7 @@ dual_media_filtration,default,baseline,kg/m3,0.97,tss,fractional_constituent_rem
 dual_media_filtration,default,baseline,%,70,ultraviolet_transmittance_uvt,absolute_value,nawi,Monterey case study.,Ultraviolet Transmittance (UVT)
 electrodialysis_reversal,default,baseline,pH,-0.77,ph_max,delta_constituent_or_property,nawi,Irwin case study.,pH_Max
 electrodialysis_reversal,default,baseline,pH,-0.77,ph_min,delta_constituent_or_property,nawi,Irwin case study.,pH_Min
+electrodialysis_reversal,test,baseline,kg/m3,0.808696,tds,fractional_constituent_removal,nawi,Irwin case study.,Total Dissolved Solids (TDS)
 electrodialysis_reversal,default,baseline,kg/m3,0.808696,tds,fractional_constituent_removal,nawi,Irwin case study.,Total Dissolved Solids (TDS)
 electrodialysis_reversal,default,baseline,kg/m3,0.823529,fluoride,fractional_constituent_removal,nawi,Irwin case study.,Fluoride
 electrodialysis_reversal,default,baseline,kg/m3,0.830347,bicarbonate_alkalinity_as_caco3,fractional_constituent_removal,nawi,Irwin case study.,Bicarbonate Alkalinity as CaCO3
@@ -368,6 +373,8 @@ reverse_osmosis,default,baseline,kg/m3,0.98,chloride,fractional_constituent_remo
 reverse_osmosis,default,baseline,kg/m3,0.98,fluoride,fractional_constituent_removal,nawi,doi:10.3390/polym11081255,Fluoride
 reverse_osmosis,default,baseline,kg/m3,0.98,magnesium,fractional_constituent_removal,nawi,doi:10.3390/polym11081256,"Magnesium, Dissolved"
 reverse_osmosis,default,baseline,kg/m3,0.98,potassium,fractional_constituent_removal,nawi,doi:10.3390/polym11081257,Potassium
+reverse_osmosis,default,baseline,kg/m3,0.98,iron,fractional_constituent_removal,nawi,doi:10.3390/polym11081258,Silicon
+reverse_osmosis,default,baseline,kg/m3,0.98,manganese,fractional_constituent_removal,nawi,doi:10.3390/polym11081258,Silicon
 reverse_osmosis,default,baseline,kg/m3,0.98,silicon,fractional_constituent_removal,nawi,doi:10.3390/polym11081258,Silicon
 reverse_osmosis,default,baseline,kg/m3,0.98,sodium,fractional_constituent_removal,nawi,doi:10.3390/polym11081259,"Sodium, Dissolved"
 reverse_osmosis,default,baseline,kg/m3,0.98,strontium,fractional_constituent_removal,nawi,doi:10.3390/polym11081260,Strontium
