@@ -5,7 +5,7 @@ setup(
         url='https://github.com/NREL/WaterTAP3',
         description="WaterTAP3 modeling library",
     keywords="water systems, chemical engineering, process modeling, filtration, desalination, nawi",
-        version='0.0.1.dev0',
+        version='0.2.0',
         packages=find_packages(include=("watertap3*")),
     # install_requires=["pyomo>=6.6.1", "idaes-pse", "numpy", "pandas", "scikit-learn"]
     install_requires=["watertap==0.11", "ipykernel", "scikit-learn"],
